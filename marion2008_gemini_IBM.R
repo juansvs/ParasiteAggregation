@@ -2,8 +2,8 @@
 # --- Main Simulation Function ---
 #
 run_grazing_model <- function(
-    Na, N_patches, total_time, h_max, beta, h0, mu_f, mu_w,
-    lambda_w, lambda_f, s0, nu, alpha, seed = NULL
+    Na, N_patches, total_time, beta, gamma, h_max, h0, s0, mu_f, mu_w,
+    lambda_w, lambda_f, nu, alpha, seed = NULL
 ) {
   if (!is.null(seed)) {
     set.seed(seed)
@@ -18,13 +18,11 @@ run_grazing_model <- function(
 
   # Place animals randomly on the grid
   animal_locations <- sample(1:N_patches, Na, replace = TRUE)
-  for (loc in animal_locations) {
-    c[loc] <- c[loc] + 1
-  }
+  c[animal_locations] <- c[animal_locations]+1
 
   current_time <- 0
-  time_series <- data.frame(time = 0, avg_height = mean(h), avg_stomach = mean(s))
-
+  time_series <- data.frame(time = current_time, event = 'start',avg_height = mean(h), avg_contamination = mean(f))
+  
   # Main simulation loop
   while (current_time < total_time) {
 
@@ -36,17 +34,15 @@ run_grazing_model <- function(
     total_rate <- sum(rates$all_rates)
 
     # 2. Determine time to next event (exponential distribution)
-    if (total_rate == 0) {
-      break # No events left to occur
-    }
-    delta_t <- rexp(1, rate = total_rate)
+    # if (total_rate == 0) {
+    #   break # No events left to occur
+    # }
+    rnums <- runif(2)
+    delta_t <- -log(rnums[1])/total_rate
 
     # 3. Choose which event occurs
-    event_index <- sample(
-      1:length(rates$all_rates),
-      size = 1,
-      prob = rates$all_rates / total_rate
-    )
+    event_probs <- cumsum(rates$all_rates/total_rate)
+    event_index <- 1+sum(rnums[2]>event_probs)
 
     # 4. Update state variables based on the chosen event
     event_type <- rates$event_types[event_index]
@@ -79,30 +75,21 @@ run_grazing_model <- function(
         s[animal_idx] <- s[animal_idx] - s0
       }
     } else if (event_type == "movement") {
+      dest_patch <- rates$destinations[event_index]
       animal_idx <- event_patch_or_animal_idx
       current_patch <- animal_locations[animal_idx]
-      # Select new patch based on search kernel
-      
-      # For simplicity, we'll implement the global search model from the text
-      # A better implementation would pre-calculate probabilities
-      possible_moves <- setdiff(1:N_patches, current_patch)
-      
-      # Calculate power law probabilities for all other patches
-      distances <- sqrt((floor((current_patch - 1) / sqrt(N_patches)) - floor((possible_moves - 1) / sqrt(N_patches)))^2 + 
-                        ((current_patch - 1) %% sqrt(N_patches) - (possible_moves - 1) %% sqrt(N_patches))^2)
-      probs <- distances^(-alpha)
-      
-      if (sum(probs) > 0) {
-          new_patch <- sample(possible_moves, size = 1, prob = probs)
-          c[current_patch] <- c[current_patch] - 1
-          c[new_patch] <- c[new_patch] + 1
-          animal_locations[animal_idx] <- new_patch
-      }
+      c[current_patch] <- c[current_patch]-1
+      c[dest_patch] <- c[dest_patch]+1
+      animal_locations[animal_idx] <- dest_patch
     }
 
-    # 5. Advance time and record state
-    current_time <- current_time + delta_t
-    time_series <- rbind(time_series, data.frame(time = current_time, avg_height = mean(h), avg_stomach = mean(s)))
+    # 5. Advance time and record state every 5 minutes
+    new_time <- current_time+delta_t
+    if(floor(new_time)%%5==0) {
+      time_series <- rbind(time_series, data.frame(time = current_time, event = event_type, avg_height = mean(h), avg_contamination = mean(f)))
+    }
+    current_time <- new_time
+    
   }
   return(time_series)
 }
@@ -116,38 +103,65 @@ get_event_rates <- function(h, c, f, w, s, animal_locations, Na, N_patches,
   all_rates <- c()
   event_types <- c()
   event_indices <- c()
+  destination <- c()
 
   # 1. Grazing rates for each animal
   grazing_rates <- beta * (h[animal_locations] - h0) * exp(-mu_f * f[animal_locations] - mu_w * w[animal_locations])
-  grazing_rates[grazing_rates < 0] <- 0 # Ensure no negative rates
   all_rates <- c(all_rates, grazing_rates)
   event_types <- c(event_types, rep("grazing", Na))
   event_indices <- c(event_indices, 1:Na)
-
+  destination <- c(destination, rep(NA, Na))
+  
   # 2. Defecation rates for each animal
-  defecation_rates <- (nu * (s >= s0)) / s0 # Simplified since intake and faeces are in same units
+  defecation_rates <- f_dep*(s-s0)*as.numeric(s>s0)
   all_rates <- c(all_rates, defecation_rates)
   event_types <- c(event_types, rep("defecation", Na))
   event_indices <- c(event_indices, 1:Na)
-
+  destination <- c(destination, rep(NA, Na))
+  
   # 3. Movement rates for each animal
-  movement_rates <- rep(nu, Na)
-  all_rates <- c(all_rates, movement_rates)
-  event_types <- c(event_types, rep("movement", Na))
-  event_indices <- c(event_indices, 1:Na)
+  movement_rates <- lapply(animal_locations, mov_rate, hj = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches))
+  all_rates <- c(all_rates, unlist(movement_rates))
+  event_types <- c(event_types, rep("movement", Na*N_patches))
+  event_indices <- c(event_indices, rep(1:Na, each = N_patches))
+  destination <- c(destination, rep(1:N_patches, Na))
 
   # 4. Sward growth rates for each patch
-  growth_rates <- h * (1 - h / h_max)
+  growth_rates <- gamma * h * (1 - h / h_max)
   all_rates <- c(all_rates, growth_rates)
   event_types <- c(event_types, rep("growth", N_patches))
   event_indices <- c(event_indices, 1:N_patches)
-
+  destination <- c(destination, rep(NA, N_patches))
+  
   # 5. Faecal decay rates for each patch
   f_decay_rates <- lambda_f * f
   w_decay_rates <- lambda_w * w
   all_rates <- c(all_rates, f_decay_rates, w_decay_rates)
   event_types <- c(event_types, rep("f_decay", N_patches), rep("w_decay", N_patches))
   event_indices <- c(event_indices, 1:N_patches, 1:N_patches)
+  destination <- c(destination, rep(NA, 2*N_patches))
+  
+  return(list(all_rates = all_rates, event_types = event_types, event_indices = event_indices, destinations = destination))
+}
 
-  return(list(all_rates = all_rates, event_types = event_types, event_indices = event_indices))
+
+# function to calculate the rates at which an individual in patch i moves to
+# patch j
+mov_rate <- function(cell_curr, hj, nu, alpha, rw, cl) {
+  index_matrix <- matrix(nrow = rw, ncol = cl)
+  rowmat <- row(index_matrix)
+  colmat <- col(index_matrix)
+  # get x,y coordinates
+  curr_row <- row(index_matrix)[cell_curr]
+  curr_col <- col(index_matrix)[cell_curr]
+  # get distances in x and y from the rest of the grid
+  xdist <- curr_col-colmat
+  ydist <- curr_row-rowmat
+  # power law using the Euclidean distance, and the alpha value
+  F_i <- sqrt(xdist^2+ydist^2)^-alpha
+  # substitute the current cell value by 0
+  F_i[cell_curr] <- 0
+  z_i <- sum(F_i)
+  rate <- nu/z_i*F_i*hj
+  return(rate)
 }
