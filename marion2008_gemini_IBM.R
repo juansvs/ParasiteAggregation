@@ -21,7 +21,10 @@ run_grazing_model <- function(
   c[animal_locations] <- c[animal_locations]+1
 
   current_time <- 0
-  time_series <- data.frame(time = current_time, event = 'start',avg_height = mean(h), avg_contamination = mean(f))
+  n_feces_investig <- 0
+  time_series <- data.frame(time = numeric(total_time%/%5+1), avg_height = 0, avg_contamination = 0, feces_invest = 0)
+  time_series[1,] <- data.frame(time = current_time, avg_height = mean(h), avg_contamination = mean(f), feces_invest = n_feces_investig)
+  ix <- 1
   
   # Main simulation loop
   while (current_time < total_time) {
@@ -58,6 +61,7 @@ run_grazing_model <- function(
         h[patch_idx] <- h[patch_idx] - 1
         s[animal_idx] <- s[animal_idx] + 1
       }
+      if(f[patch_idx]>0) n_feces_investig <- n_feces_investig + 1
     } else if (event_type == "f_decay") {
       if (f[event_patch_or_animal_idx] > 0) {
         f[event_patch_or_animal_idx] <- f[event_patch_or_animal_idx] - 1
@@ -86,7 +90,8 @@ run_grazing_model <- function(
     # 5. Advance time and record state every 5 minutes
     new_time <- current_time+delta_t
     if(floor(new_time)%%5==0) {
-      time_series <- rbind(time_series, data.frame(time = current_time, event = event_type, avg_height = mean(h), avg_contamination = mean(f)))
+      time_series[ix,] <- data.frame(time = current_time, avg_height = mean(h), avg_contamination = mean(f), feces_invest = n_feces_investig)
+      ix <- ix+1
     }
     current_time <- new_time
     
