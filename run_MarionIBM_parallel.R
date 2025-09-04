@@ -35,14 +35,15 @@ alpha <- 10 #  power law search coefficient
 f_dep <- 1 # defecation rate
 
 #--- Set up parallel workers
-cl <- makeCluster(10)
+nWorkers<-length(future::availableWorkers())
+cl <- makeCluster(nWorkers)
 registerDoParallel(cl)
 
 #--- run code in parallel
-out <- foreach(i=1:10) %dopar%
+out <- foreach(i=1:nWorkers) %dopar%
   run_grazing_model(Na, N_patches, total_time, beta, gamma, h_max, h0, s0, mu_f, mu_w,
                          lambda_w, lambda_f, nu, alpha)
 
-outname <- paste0("MarionSimOut_", format(Sys.time(), format = "%Y%m%d_%H%M"), ".RData")
-save(out, file = outname)
+outname <- paste0("MarionSimOut_", format(Sys.time(), format = "%Y%m%d_%H%M"), ".rds")
+saveRDS(out, file = outname)
 
