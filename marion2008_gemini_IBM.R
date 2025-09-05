@@ -1,3 +1,9 @@
+#### TO DO ####
+
+# Incorporate parasite shedding
+# Incorporate parasite acquisition
+# Incorporate parasite migration (e.g. Gloworm)
+
 #
 # --- Main Simulation Function ---
 #
@@ -89,7 +95,9 @@ run_grazing_model <- function(
 
     # 5. Advance time and record state every 5 minutes
     new_time <- current_time+delta_t
-    if(floor(new_time)%%5==0) {
+    record_state <- all(floor(new_time)%%5==0, floor(new_time)>floor(current_time))
+    if(record_state) {
+      print(current_time)
       time_series[ix,] <- data.frame(time = current_time, avg_height = mean(h), avg_contamination = mean(f), feces_invest = n_feces_investig)
       ix <- ix+1
     }
