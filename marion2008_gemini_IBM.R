@@ -14,7 +14,7 @@ run_grazing_model <- function(
   if (!is.null(seed)) {
     set.seed(seed)
   }
-
+  
   # Initialize state variables
   h <- rep(h_max / 2, N_patches) # Sward height in each patch
   f <- rep(0, N_patches)        # Livestock faeces
@@ -30,7 +30,7 @@ run_grazing_model <- function(
   n_feces_investig <- 0
   time_series <- data.frame(time = numeric(total_time%/%5+1), avg_height = 0, avg_contamination = 0, feces_invest = 0)
   time_series[1,] <- data.frame(time = current_time, avg_height = mean(h), avg_contamination = mean(f), feces_invest = n_feces_investig)
-  ix <- 1
+  ix <- 2
   
   # Main simulation loop
   while (current_time < total_time) {
@@ -97,7 +97,7 @@ run_grazing_model <- function(
     new_time <- current_time+delta_t
     record_state <- all(floor(new_time)%%5==0, floor(new_time)>floor(current_time))
     if(record_state) {
-      print(current_time)
+      dump(current_time)
       time_series[ix,] <- data.frame(time = current_time, avg_height = mean(h), avg_contamination = mean(f), feces_invest = n_feces_investig)
       ix <- ix+1
     }
