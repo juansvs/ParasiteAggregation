@@ -36,7 +36,7 @@ run_model <- function(seed = NULL) {
     for (y in 1:1e7) {
       # 1. Calculate event rates for all possible events
       all_rates <- get_event_rates()
-      total_rate <- sum(rates)
+      total_rate <- sum(all_rates)
       
       # 2. Determine time to next event (exponential distribution)
       # if (total_rate == 0) {
