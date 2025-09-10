@@ -190,7 +190,7 @@ update_state <- function(event_index, event_db) {
       f[patch_idx] <<- f[patch_idx] + s0
     }
   } else if (event_type == "movement") {
-    dest_patch <- event_db$destinations[event_index]
+    dest_patch <- event_db$destination[event_index]
     animal_idx <- patch_or_animal_idx
     # current_patch <- animal_locations[animal_idx]
     # c[current_patch] <- c[current_patch]-1
