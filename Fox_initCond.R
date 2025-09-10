@@ -7,6 +7,7 @@ total_time = 60*24*1 # total simulation time (in minutes)
 h_max =  400 # maximum sward height (logistic growth)
 h0 = 50 # ungrazeable portion of sward
 s0 = 2000 # units of feces deposited per defecation event
+B = 1 # bite size
 
 ## patch parameters
 gamma = 0.00004 # sward growth rate
@@ -37,7 +38,7 @@ alpha = 10 #  power law search coefficient
 larvae_patches <- sample(1:N_patches, 20)
 L_counts <- sample(larvae_patches, 24000, replace = T) |> table()
 L <- rep(0, N_patches)
-L[names(L_counts)] <- L_counts
+L[as.numeric(names(L_counts))] <- L_counts
 
 # Patch variables
 h = rep(h_max / 2, N_patches) # Sward height in each patch
