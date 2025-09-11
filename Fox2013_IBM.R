@@ -1,6 +1,7 @@
 #### TO DO ####
 
 # Incorporate parasite migration (e.g. Gloworm)
+# check functions of resistance: rates lambda, tau, and change theta
 
 #
 #
@@ -31,8 +32,8 @@ run_model <- function(seed = NULL) {
   # Main simulation loop
   while (current_time < total_time) {
     # Create a bunch of random numbers at once to save computation time
-    rnums <- matrix(runif(2e7), ncol = 2)
-    for (y in 1:1e7) {
+    rnums <- matrix(runif(2e6), ncol = 2)
+    for (y in 1:nrow(rnums)) {
       # 1. Calculate event rates for all possible events
       all_rates <- get_event_rates()
       total_rate <- sum(all_rates)
@@ -52,12 +53,13 @@ run_model <- function(seed = NULL) {
       
       # 5. Advance time and record state every 30 minutes
       new_time <- current_time+delta_t
-      record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%30==0)
+      record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%10==0)
       if(record_state) {
-        time_series[ix,] <- c(current_time, mean(h), mean(a), mean(A), mean(l), mean(L))
+        time_series[ix,] <- c(new_time, mean(h), mean(a), mean(A), mean(l), mean(L))
         ix <- ix+1
       }
       current_time <- new_time
+      if(current_time>total_time) break
     }
   }
   return(time_series)
@@ -96,19 +98,19 @@ get_event_rates <- function() {
   f_decay <- phi * f
   
   # Grazing rates for each animal
-  grazing_rates <- beta * (h[animal_locations] - h0) * exp(-mu_f * f[animal_locations] *(a+A)*Lambda)
+  grazing_rates <- beta * (h[animal_locations] - h0) * exp(-mu_f * f[animal_locations] *(a+A)^Lambda)
   # death of immature adults in host
   death_a <- zeta * a
   # development into adult parasites
   dev_a <- chi * a
   # death of adult parasites
-  death_A <- tau * r * A
+  death_A <- tau * A
   # gain of immunity due to parasite burden
   immun_gain <- (a + A) * eta
   # loss of immunity
   immun_loss <- sig * r
   # egg production
-  egg_prod <- lambda * r * A/2
+  egg_prod <- lambda * A/2
   # Defecation rates for each animal
   defecation_rates <- f_dep*(s-s0)*as.numeric(s>s0)
   # Movement rates for each animal
@@ -164,7 +166,7 @@ update_state <- function(event_index, event_db) {
     s[animal_idx] <<- s[animal_idx] + 1  # increase stomach content
     l[patch_idx]  <<- l[patch_idx]  - B/h[patch_idx]*l[patch_idx] # reduce number of larve in patch
     L[patch_idx]  <<- L[patch_idx]  - B/h[patch_idx]*L[patch_idx] # reduce number of larve in patch
-    a[animal_idx] <<- a[animal_idx] + theta*r[animal_idx]*(B/h[patch_idx])*L[patch_idx] # increase number of larvae in host
+    a[animal_idx] <<- a[animal_idx] + theta*(B/h[patch_idx])*L[patch_idx] # increase number of larvae in host
     r[animal_idx] <<- r[animal_idx] + psi*B*L[patch_idx]/h[patch_idx] # update host resistance
   } else if(event_type == "death_a") {
     a[patch_or_animal_idx] <<- a[patch_or_animal_idx] - 1
@@ -184,7 +186,7 @@ update_state <- function(event_index, event_db) {
     patch_idx <- animal_locations[animal_idx]
     # Heaviside function (Theta(s_k - s0))
     if (s[animal_idx] >= s0) {
-      eg[animal_idx] <<- eg[animal_idx] - s0*eg[animal_idx]
+      eg[animal_idx] <<- eg[animal_idx] - s0/s[animal_idx]*eg[animal_idx]
       l[patch_idx] <<- l[patch_idx] + s0/s[animal_idx]*eg[animal_idx]
       s[animal_idx] <<- s[animal_idx] - s0
       f[patch_idx] <<- f[patch_idx] + s0
