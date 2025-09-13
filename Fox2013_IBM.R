@@ -32,7 +32,7 @@ run_model <- function(seed = NULL) {
   # Main simulation loop
   while (current_time < total_time) {
     # Create a bunch of random numbers at once to save computation time
-    rnums <- matrix(runif(2e6), ncol = 2)
+    rnums <- matrix(runif(2e4), ncol = 2)
     for (y in 1:nrow(rnums)) {
       # 1. Calculate event rates for all possible events
       all_rates <- get_event_rates()
@@ -53,13 +53,13 @@ run_model <- function(seed = NULL) {
       
       # 5. Advance time and record state every 30 minutes
       new_time <- current_time+delta_t
-      record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%10==0)
+      record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%30==0)
       if(record_state) {
         time_series[ix,] <- c(new_time, mean(h), mean(a), mean(A), mean(l), mean(L))
         ix <- ix+1
       }
       current_time <- new_time
-      if(current_time>total_time) break
+      if(current_time>=total_time) break
     }
   }
   return(time_series)
