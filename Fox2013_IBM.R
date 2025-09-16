@@ -7,9 +7,14 @@
 #
 #### --- Main Simulation Function --- ####
 #
-run_model <- function(seed = NULL) {
+run_model <- function(seed = NULL, outf = NULL) {
   if (!is.null(seed)) {
     set.seed(seed)
+  }
+  
+  # create output file if not specified
+  if(is.null(outf)) {
+    cat("Please specify an output file name")
   }
 
   # Set up output dataframe
@@ -17,6 +22,8 @@ run_model <- function(seed = NULL) {
   time_series <- data.frame(time = numeric(total_time%/%30+1), avg_height = 0, avg_a = 0, avg_A = 0, avg_l = 0, avg_L = 0)
   time_series[1,] <- c(current_time, mean(h), mean(a), mean(A), mean(l), mean(L))
   ix <- 2
+  cat(c("time", "avg_h", "avg_a", "avg_A", "avg_l", "avg_L", "\n"), sep = "\t", file = outf)
+  cat(c(current_time, mean(h), mean(a), mean(A), mean(l), mean(L)),"\n", sep = "\t", file = outf)
   
   #rates list object
   event_db <- list(event_types = c(rep(c("growth","development_l","death_l",
@@ -56,6 +63,7 @@ run_model <- function(seed = NULL) {
       record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%30==0)
       if(record_state) {
         time_series[ix,] <- c(new_time, mean(h), mean(a), mean(A), mean(l), mean(L))
+        cat(c(new_time, mean(h), mean(a), mean(A), mean(l), mean(L)), "\n", sep = "\t", file = outf)
         ix <- ix+1
       }
       current_time <- new_time

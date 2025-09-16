@@ -16,16 +16,17 @@ library(doParallel)
 
 #--- Import functions, parameters and initial states
 source('Fox2013_IBM.R')
-
+source('Fox_initCond.R')
 #--- Set up parallel workers
-nWorkers<-length(future::availableWorkers())
+nWorkers<-length(future::availableWorkers())/2
 cl <- makeCluster(nWorkers)
 registerDoParallel(cl)
 
 #--- run code in parallel
-clusterEvalQ(cl, source('Fox_initCond.R')) # initializing in each core so that initial conditions are not identical
-out <- foreach(i=1:nWorkers) %dopar%  run_model()
+outfnames <- paste0("out_",1:nWorkers,".out")
+out <- foreach(i=1:(nWorkers)) %dopar%  run_model(outf = outfnames[[i]])
 
-outname <- paste0("FoxSimOut_", format(Sys.time(), format = "%Y%m%d_%H%M"), ".rds")
-saveRDS(out, file = outname)
+outname <- paste0("FoxSimOut_", format(Sys.time(), format = "%y%m%d_%H%M"), ".rds")
+# saveRDS(out, file = outname)
+stopCluster(cl)
 
