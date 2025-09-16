@@ -23,7 +23,7 @@ cl <- makeCluster(nWorkers)
 registerDoParallel(cl)
 
 #--- run code in parallel
-outfnames <- paste0("out_",1:nWorkers,".out")
+outfnames <- paste0("FoxSimout_", format(Sys.time(),"%y%m%d_%H%M-"),1:nWorkers,".out")
 out <- foreach(i=1:(nWorkers)) %dopar%  run_model(outf = outfnames[[i]])
 
 outname <- paste0("FoxSimOut_", format(Sys.time(), format = "%y%m%d_%H%M"), ".rds")
