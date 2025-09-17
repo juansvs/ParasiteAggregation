@@ -3,7 +3,7 @@
 ## arena setup
 Na = 5 # N animals
 N_patches =  78*78 # N patches
-total_time = 60*24*1 # total simulation time (in minutes) 
+total_time = 60*24*30 # total simulation time (in minutes) 
 h_max =  400 # maximum sward height (logistic growth)
 h0 = 50 # ungrazeable portion of sward
 s0 = 2000 # units of feces deposited per defecation event
