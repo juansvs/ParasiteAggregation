@@ -15,10 +15,10 @@ run_model <- function(seed = NULL, outf) {
 
   # Set up output dataframe
   current_time <- 0
-  time_series <- data.frame(time = numeric(total_time%/%30+1), avg_height = 0, avg_a = 0, avg_A = 0, avg_l = 0, avg_L = 0)
-  time_series[1,] <- c(current_time, mean(h), mean(a), mean(A), mean(l), mean(L))
+  time_series <- data.frame(time = numeric(total_time%/%30+1), avg_height = 0, avg_a = 0, avg_A = 0, sd_A = 0, avg_l = 0, avg_L = 0)
+  time_series[1,] <- c(current_time, mean(h), mean(a), mean(A), sd(A), mean(l), mean(L))
   ix <- 2
-  cat(c("time","sim_time", "avg_h", "avg_a", "avg_A", "avg_l", "avg_L", "\n"), sep = "\t", file = outf)
+  cat(c("time","sim_time", "avg_h", "avg_a", "avg_A", "sd_A", "avg_l", "avg_L", "\n"), sep = "\t", file = outf)
   cat(c(0,current_time, mean(h), mean(a), mean(A), mean(l), mean(L)),"\n", sep = "\t", file = outf, append = T)
   
   #rates list object
@@ -58,9 +58,9 @@ run_model <- function(seed = NULL, outf) {
       new_time <- current_time+delta_t
       record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%30==0)
       if(record_state) {
-        time_series[ix,] <- c(new_time, mean(h), mean(a), mean(A), mean(l), mean(L))
+        time_series[ix,] <- c(new_time, mean(h), mean(a), mean(A), sd(A), mean(l), mean(L))
         elapsedtime <- as.numeric(difftime(Sys.time(), starttime), units = "hours")
-        cat(c(elapsedtime, new_time, mean(h), mean(a), mean(A), mean(l), mean(L)), "\n", sep = "\t", file = outf, append = T)
+        cat(c(elapsedtime, new_time, mean(h), mean(a), mean(A), sd(A), mean(l), mean(L)), "\n", sep = "\t", file = outf, append = T)
         ix <- ix+1
       }
       current_time <- new_time
@@ -160,7 +160,7 @@ get_event_rates <- function(type = c('exact','tau','sort'), eix = NULL, db = eve
       dev_l[event_index] <<- epsilon * l[patch]
       death_l[event_index] <<- omega * l[patch]
     } else if (event_type=="movement") {
-      movement_rates <<- sapply(animal_locations, mov_rate, hj = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches))
+      movement_rates[,event_index] <<- mov_rate(animal_locations[event_index], hj = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches))
     }
   }
   all_rates <- c(growth_rates, dev_l, death_l, death_L, f_decay, 
