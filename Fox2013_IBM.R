@@ -7,7 +7,7 @@
 #
 #### --- Main Simulation Function --- ####
 #
-run_model <- function(seed = NULL, outf) {
+run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
   starttime <- Sys.time()
   if (!is.null(seed)) {
     set.seed(seed)
@@ -15,7 +15,7 @@ run_model <- function(seed = NULL, outf) {
 
   # Set up output dataframe
   current_time <- 0
-  time_series <- data.frame(time = numeric(total_time%/%30+1), avg_height = 0, avg_a = 0, avg_A = 0, sd_A = 0, avg_l = 0, avg_L = 0)
+  time_series <- data.frame(time = numeric(total_time%/%tstep+1), avg_height = 0, avg_a = 0, avg_A = 0, sd_A = 0, avg_l = 0, avg_L = 0)
   time_series[1,] <- c(current_time, mean(h), mean(a), mean(A), sd(A), mean(l), mean(L))
   ix <- 2
   cat(c("time","sim_time", "avg_h", "avg_a", "avg_A", "sd_A", "avg_l", "avg_L", "\n"), sep = "\t", file = outf)
