@@ -59,33 +59,3 @@ S <- list(
   eg = rep(0, Na),             # Number of eggs in host
   s = rep(0, Na)              # Stomach content per animal
 )
-## Event rates
-# sward growth
-growth_rates <- gamma * h * (1 - h / h_max)
-# development of larvae in patches
-dev_l <- epsilon * l
-# death of pre-infective larvae
-death_l <- omega * l
-# death of infective larvae
-death_L <- rho * L
-# Fecal decay rates for each patch
-f_decay <- phi * f
-
-# Grazing rates for each animal
-grazing_rates <- beta * (h[animal_locations] - h0) * exp(-mu_f * f[animal_locations] *(a+A)^Lambda)
-# death of immature adults in host
-death_a <- zeta * a
-# development into adult parasites
-dev_a <- chi * a
-# death of adult parasites
-death_A <- tau * A
-# gain of immunity due to parasite burden
-immun_gain <- (a + A) * eta
-# loss of immunity
-immun_loss <- sig * r
-# egg production
-egg_prod <- lambda * A/2
-# Defecation rates for each animal
-defecation_rates <- f_dep*(s-s0)*as.numeric(s>s0)
-# Movement rates for each animal
-movement_rates <- sapply(animal_locations, mov_rate, hj = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches))
