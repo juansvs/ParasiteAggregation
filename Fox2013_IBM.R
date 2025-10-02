@@ -248,59 +248,63 @@ mov_rate <- function(cell_curr, hj, nu, alpha, rw, cl) {
 }
 
 # function to update state space based on event type. 
-update_state <- function(event_index, event_db) {
-  event_type <- event_db$event_types[event_index]
-  patch_or_animal_idx <- event_db$event_indices[event_index]
-  if (event_type == "growth") {
-    h[patch_or_animal_idx] <<- h[patch_or_animal_idx] + 1
-  } else if (event_type == "development_l") {
-    l[patch_or_animal_idx] <<- l[patch_or_animal_idx]-1
-    L[patch_or_animal_idx] <<- L[patch_or_animal_idx]+1
-  } else if(event_type == "death_l") {
-    l[patch_or_animal_idx] <<- l[patch_or_animal_idx]-1
-  } else if(event_type == "death_L") {
-    L[patch_or_animal_idx] <<- L[patch_or_animal_idx]-1
-  } else if (event_type == "f_decay") {
-    f[patch_or_animal_idx] <<- f[patch_or_animal_idx] - 1
-  } else if (event_type == "bite") {
-    animal_idx    <- patch_or_animal_idx
-    patch_idx     <- animal_locations[animal_idx]
-    h[patch_idx]  <<- h[patch_idx]  - 1   # reduce patch sward height
-    s[animal_idx] <<- s[animal_idx] + 1  # increase stomach content
-    l[patch_idx]  <<- l[patch_idx]  - B/h[patch_idx]*l[patch_idx] # reduce number of larve in patch
-    L[patch_idx]  <<- L[patch_idx]  - B/h[patch_idx]*L[patch_idx] # reduce number of larve in patch
-    a[animal_idx] <<- a[animal_idx] + theta*(B/h[patch_idx])*L[patch_idx] # increase number of larvae in host
-    r[animal_idx] <<- r[animal_idx] + psi*B*L[patch_idx]/h[patch_idx] # update host resistance
-  } else if(event_type == "death_a") {
-    a[patch_or_animal_idx] <<- a[patch_or_animal_idx] - 1
-  } else if(event_type == "development_a") {
-    a[patch_or_animal_idx] <<- a[patch_or_animal_idx] - 1
-    A[patch_or_animal_idx] <<- A[patch_or_animal_idx] + 1
-  } else if(event_type == "death_A") {
-    A[patch_or_animal_idx] <<- A[patch_or_animal_idx] - 1
-  } else if(event_type == "immunity_gain") {
-    r[patch_or_animal_idx] <<- r[patch_or_animal_idx] + 1
-  } else if(event_type == "immunity_loss") {
-    r[patch_or_animal_idx] <<- r[patch_or_animal_idx] - 1
-  } else if(event_type == "egg_prod") {
-    eg[patch_or_animal_idx] <<- eg[patch_or_animal_idx] + 1
-  } else if (event_type == "defecation") {
-    animal_idx <- patch_or_animal_idx
-    patch_idx <- animal_locations[animal_idx]
-    # Heaviside function (Theta(s_k - s0))
-    if (s[animal_idx] >= s0) {
-      eg[animal_idx] <<- eg[animal_idx] - s0/s[animal_idx]*eg[animal_idx]
-      l[patch_idx] <<- l[patch_idx] + s0/s[animal_idx]*eg[animal_idx]
-      s[animal_idx] <<- s[animal_idx] - s0
-      f[patch_idx] <<- f[patch_idx] + s0
-    }
-  } else if (event_type == "movement") {
-    dest_patch <- event_db$destination[event_index]
-    animal_idx <- patch_or_animal_idx
-    # current_patch <- animal_locations[animal_idx]
-    # c[current_patch] <- c[current_patch]-1
-    # c[dest_patch] <- c[dest_patch]+1
-    animal_locations[animal_idx] <<- dest_patch
-  } 
+update_state_exact <- function(event_type, event_index, dest = NULL, S, pars) {
+  with(c(pars, S),{
+    if (event_type == "growth") {
+      h[event_index] <- h[event_index] + 1
+    } else if (event_type == "development_l") {
+      l[event_index] <- l[event_index]-1
+      L[event_index] <- L[event_index]+1
+    } else if(event_type == "death_l") {
+      l[event_index] <- l[event_index]-1
+    } else if(event_type == "death_L") {
+      L[event_index] <- L[event_index]-1
+    } else if (event_type == "f_decay") {
+      f[event_index] <- f[event_index] - 1
+    } else if (event_type == "bite") {
+      animal_idx    <- event_index
+      patch_idx     <- animal_locations[animal_idx]
+      h[patch_idx]  <- h[patch_idx]  - 1   # reduce patch sward height
+      s[animal_idx] <- s[animal_idx] + 1  # increase stomach content
+      l[patch_idx]  <- l[patch_idx]  - B/h[patch_idx]*l[patch_idx] # reduce number of larve in patch
+      L[patch_idx]  <- L[patch_idx]  - B/h[patch_idx]*L[patch_idx] # reduce number of larve in patch
+      a[animal_idx] <- a[animal_idx] + theta*(B/h[patch_idx])*L[patch_idx] # increase number of larvae in host
+      r[animal_idx] <- r[animal_idx] + psi*B*L[patch_idx]/h[patch_idx] # update host resistance
+    } else if(event_type == "death_a") {
+      a[event_index] <- a[event_index] - 1
+    } else if(event_type == "development_a") {
+      a[event_index] <- a[event_index] - 1
+      A[event_index] <- A[event_index] + 1
+    } else if(event_type == "death_A") {
+      A[event_index] <- A[event_index] - 1
+    } else if(event_type == "immunity_gain") {
+      r[event_index] <- r[event_index] + 1
+    } else if(event_type == "immunity_loss") {
+      r[event_index] <- r[event_index] - 1
+    } else if(event_type == "egg_prod") {
+      eg[event_index] <- eg[event_index] + 1
+    } else if (event_type == "defecation") {
+      animal_idx <- event_index
+      patch_idx <- animal_locations[animal_idx]
+      # Heaviside function (Theta(s_k - s0))
+      if (s[animal_idx] >= s0) {
+        eg[animal_idx] <- eg[animal_idx] - s0/s[animal_idx]*eg[animal_idx]
+        l[patch_idx]   <- l[patch_idx] + s0/s[animal_idx]*eg[animal_idx]
+        s[animal_idx]  <- s[animal_idx] - s0
+        f[patch_idx]   <- f[patch_idx] + s0
+      }
+    } else if (event_type == "movement") {
+      animal_locations[event_index] <- dest
+    } 
+    return(list(h = h, f = f, l = l, L = L, 
+                animal_locations = animal_locations,
+                r = r, a = a, A = A,
+                eg = eg, s = s))
+  }
+  )
+}
+
+update_state_tau <- function() {
+  
 }
 
