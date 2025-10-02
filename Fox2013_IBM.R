@@ -8,6 +8,9 @@
 #### --- Main Simulation Function --- ####
 #
 run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
+  # call up parameters and state variables
+  attach(pars)
+  attach(S)
   starttime <- Sys.time()
   if (!is.null(seed)) {
     set.seed(seed)
