@@ -73,101 +73,149 @@ run_model <- function(seed = NULL, outf) {
 #
 #### --- Helper Functions --- ####
 #
-get_event_rates <- function(type = c('exact','tau','sort'), eix = NULL, db = event_db) {
-  if (type == 'exact') {
+get_event_rates0 <- function(pars = NULL, S = NULL) {
+  with(c(pars,S),{ 
     # sward growth
-    growth_rates <<- gamma * h * (1 - h / h_max)
+    growth <- gamma * h * (1 - h / h_max)
     # development of larvae in patches
-    dev_l <<- epsilon * l
+    dev_l <- epsilon * l
     # death of pre-infective larvae
-    death_l <<- omega * l
+    death_l <- omega * l
     # death of infective larvae
-    death_L <<- rho * L
+    death_L <- rho * L
     # Fecal decay rates for each patch
-    f_decay <<- phi * f
+    f_decay <- phi * f
     
     # Grazing rates for each animal
-    grazing_rates <<- beta * (h[animal_locations] - h0) * exp(-mu_f * f[animal_locations] *(a+A)^Lambda)
+    grazing <- beta * (h[animal_locations] - h0) * exp(-mu_f * f[animal_locations] *(a+A)^Lambda)
     # death of immature adults in host
-    death_a <<- zeta * a
+    death_a <- zeta * a
     # development into adult parasites
-    dev_a <<- chi * a
+    dev_a <- chi * a
     # death of adult parasites
-    death_A <<- tau * A
+    death_A <- tau * A
     # gain of immunity due to parasite burden
-    immun_gain <<- (a + A) * eta
+    immun_gain <- (a + A) * eta
     # loss of immunity
-    immun_loss <<- sig * r
+    immun_loss <- sig * r
     # egg production
-    egg_prod <<- lambda * A/2
+    egg_prod <- lambda * A/2
     # Defecation rates for each animal
-    defecation_rates <<- f_dep*(s-s0)*as.numeric(s>s0)
+    defecation <- f_dep*(s-s0)*as.numeric(s>s0)
     # Movement rates for each animal
-    movement_rates <<- sapply(animal_locations, mov_rate, hj = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches))
-  } else if(type == 'tau') {
-    simpleError("tau leaps are not yet implemented")
-  } else if(type == 'sort') {
-    event_type <- db$event_types[eix]
-    event_index <- db$event_indices[eix]
-    # only update based on previous event
-    if(event_type == "growth") {
-      growth_rates[event_index] <<- gamma * h[event_index] * (1 - h[event_index] / h_max)
-      # check if there is an animal in the patch
-      animals_in_patch <- which(animal_locations==event_index)
-      grazing_rates[animals_in_patch] <- beta * (h[event_index] - h0) * exp(-mu_f * f[event_index] *(a[animals_in_patch]+A[animals_in_patch])^Lambda)
-    } else if (event_type=="dev_l") {
-      dev_l[event_index] <<- epsilon * l[event_index]
-      death_l[event_index] <<- omega * l[event_index]
-      death_L[event_index] <<- rho * L[event_index]
-    } else if (event_type=="death_l") {
-      death_l[event_index] <<- omega * l[event_index]
-      dev_l[event_index] <<- epsilon * l[event_index]
-    } else if (event_type=="death_L") {
-      death_L[event_index] <<- rho * L[event_index]
-    } else if (event_type=="f_decay") {
-      f_decay[event_index] <<- phi * f_decay[event_index]
-      animals_in_patch <- which(animal_locations==event_index)
-      grazing_rates[animals_in_patch] <<- beta * (h[event_index] - h0) * exp(-mu_f * f[event_index] *(a[animals_in_patch]+A[animals_in_patch])^Lambda)
-    } else if (event_type=="bite") {
-      patch <- animal_locations[event_index]
-      grazing_rates[event_index] <<- beta * (h[patch] - h0) * exp(-mu_f * f[patch] *(a[event_index]+A[event_index])^Lambda)
-      growth_rates[patch] <<- gamma * h[patch] * (1 - h[patch] / h_max)
-      death_a[event_index] <<- zeta * a[event_index]
-      dev_a[event_index] <<- chi * a[event_index]
-      dev_l[event_index] <<- epsilon * l[patch]
-      death_l[event_index] <<- omega * l[patch]
-      death_L[event_index] <<- rho * L[patch]
-    } else if (event_type=="death_a") {
-      death_a[event_index] <<- zeta * a[event_index]
-      dev_a[event_index] <<- chi * a[event_index]
-      immun_gain[event_index] <<- (a[event_index] + A[event_index]) * eta
-    } else if (event_type=="development_a") {
-      death_a[event_index] <<- zeta * a[event_index]
-      dev_a[event_index] <<- chi * a[event_index]
-      death_A[event_index] <<- tau * A[event_index]
-      egg_prod[event_index] <<- lambda * A[event_index]/2
-      immun_gain[event_index] <<- (a[event_index] + A[event_index]) * eta
-    } else if (event_type=="death_A") {
-      death_A[event_index] <<- tau * A[event_index]
-      egg_prod[event_index] <<- lambda * A[event_index]/2
-      immun_gain[event_index] <<- (a[event_index] + A[event_index]) * eta
-    } else if (event_type=="immunity_loss") {
-      immun_loss[event_index] <<- sig * r[event_index]
-    } else if (event_type=="defecation") {
-      defecation_rates[event_index] <<- f_dep*(s[event_index]-s0)*as.numeric(s[event_index]>s0)
-      patch <- animal_locations[event_index]
-      grazing_rates[event_index] <<- beta * (h[patch] - h0) * exp(-mu_f * f[patch] *(a[event_index]+A[event_index])^Lambda)
-      dev_l[event_index] <<- epsilon * l[patch]
-      death_l[event_index] <<- omega * l[patch]
-    } else if (event_type=="movement") {
-      movement_rates[,event_index] <<- mov_rate(animal_locations[event_index], hj = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches))
-    }
+    movement <- sapply(animal_locations, mov_rate, hj = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches))
+    
+    return(list(growth = growth, dev_l = dev_l, death_l = death_l, death_L = death_L, f_decay = f_decay, 
+                grazing = grazing, 
+                death_a = death_a, dev_a = dev_a, death_A = death_A, immun_gain = immun_gain, immun_loss = immun_loss, egg_prod = egg_prod, 
+                defecation = defecation, 
+                movement = movement))
   }
-  all_rates <- c(growth_rates, dev_l, death_l, death_L, f_decay, 
-                   grazing_rates, death_a, dev_a, death_A, 
-                   immun_gain, immun_loss, egg_prod, defecation_rates, 
-                   movement_rates)
-  return(all_rates)
+  )
+}
+
+
+# function to get the event rates using the Optimized method (sorting method)
+# that does not recalculate every rate, but rather only those affected by the
+# latest event
+get_event_rates_opt <- function(eix = NULL, db = NULL, rates = NULL, pars = NULL, S = NULL) {
+  event_type  <- db$event_types[eix]
+  event_index <- db$event_indices[eix]
+  # only update based on previous event
+  if(event_type == "growth") {
+    rates$growth[event_index] <- gamma * h[event_index] * (1 - h[event_index] / h_max)
+    times$growth[event_index] <- rexp(1,rates$growth[event_index])
+    # check which animals are in the patch
+    animals_in_patch <- which(animal_locations==event_index)
+    rates$grazing[animals_in_patch] <- beta * (h[event_index] - h0) * exp(-mu_f * f[event_index] *(a[animals_in_patch]+A[animals_in_patch])^Lambda)
+    times$grazing[animals_in_patch] <- rexp(length(animals_in_patch),rates$grazing[animals_in_patch])
+  } else if (event_type=="dev_l") {
+    rates$dev_l[event_index]   <- epsilon * l[event_index]
+    times$dev_l[event_index]   <- rexp(1,rates$dev_l[event_index])
+    rates$death_l[event_index] <- omega * l[event_index]
+    times$death_l[event_index] <- rexp(1,rates$death_l[event_index])
+    rates$death_L[event_index] <- rho * L[event_index]
+    times$death_L[event_index] <- rexp(1,rates$death_L[event_index])
+  } else if (event_type=="death_l") {
+    rates$death_l[event_index] <- omega * l[event_index]
+    times$death_l[event_index] <- rexp(1,rates$death_l[event_index])
+    rates$dev_l[event_index]   <- epsilon * l[event_index]
+    times$dev_l[event_index]   <- rexp(1,rates$dev_l[event_index])
+  } else if (event_type=="death_L") {
+    rates$death_L[event_index] <- rho * L[event_index]
+    times$death_L[event_index] <- rexp(1,rates$death_L[event_index])
+  } else if (event_type=="f_decay") {
+    rates$f_decay[event_index] <- phi * f_decay[event_index]
+    times$f_decay[event_index] <- rexp(1, rates$f_decay[event_index])
+    animals_in_patch <- which(animal_locations==event_index)
+    rates$grazing[animals_in_patch] <- beta * (h[event_index] - h0) * exp(-mu_f * f[event_index] *(a[animals_in_patch]+A[animals_in_patch])^Lambda)
+    times$grazing[animals_in_patch] <- rexp(length(animals_in_patch),rates$grazing[animals_in_patch])
+  } else if (event_type=="bite") {
+    patch <- animal_locations[event_index]
+    rates$grazing[event_index] <- beta * (h[patch] - h0) * exp(-mu_f * f[patch] *(a[event_index]+A[event_index])^Lambda)
+    times$grazing[event_index] <- rexp(1,rates$grazing[event_index])
+    rates$growth[patch]  <- gamma * h[patch] * (1 - h[patch] / h_max)
+    times$growth[patch] <- rexp(1, rates$growth[patch])
+    rates$death_a[event_index] <- zeta * a[event_index]
+    times$death_a[event_index] <- rexp(1,rates$death_a[event_index])
+    rates$dev_a[event_index]   <- chi * a[event_index]
+    times$dev_a[event_index] <- rexp(1,rates$dev_a[event_index])
+    rates$dev_l[event_index]   <- epsilon * l[patch]
+    times$dev_l[event_index] <- rexp(1,rates$dev_l[event_index])
+    rates$death_l[event_index] <- omega * l[patch]
+    times$death_l[event_index] <- rexp(1,rates$death_l[event_index])
+    rates$death_L[event_index] <- rho * L[patch]
+    times$death_L[event_index] <- rexp(1,rates$death_L[event_index])
+  } else if (event_type=="death_a") {
+    rates$death_a[event_index] <- zeta * a[event_index]
+    times$death_a[event_index] <- rexp(1,rates$death_a[event_index])
+    rates$dev_a[event_index]   <- chi * a[event_index]
+    times$dev_a[event_index] <- rexp(1,rates$dev_a[event_index])
+    rates$immun_gain[event_index] <- (a[event_index] + A[event_index]) * eta
+    times$immun_gain[event_index] <- rexp(1, rates$immun_gain[event_index])
+  } else if (event_type=="development_a") {
+    rates$death_a[event_index]  <- zeta * a[event_index]
+    times$death_a[event_index] <- rexp(1,rates$death_a[event_index])
+    rates$dev_a[event_index]    <- chi * a[event_index]
+    times$dev_a[event_index] <- rexp(1,rates$dev_a[event_index])
+    rates$death_A[event_index]  <- tau * A[event_index]
+    times$death_A[event_index] <- rexp(1, rates$death_A[event_index])
+    rates$egg_prod[event_index] <- lambda * A[event_index]/2
+    times$egg_prod[event_index] <- rexp(1, rates$egg_prod[event_index])
+    rates$immun_gain[event_index] <- (a[event_index] + A[event_index]) * eta
+    times$immun_gain[event_index] <- rexp(1, rates$immun_gain[event_index])
+  } else if (event_type=="death_A") {
+    rates$death_A[event_index]   <- tau * A[event_index]
+    times$death_A[event_index] <- rexp(1, rates$death_A[event_index])
+    rates$egg_prod[event_index]  <- lambda * A[event_index]/2
+    times$egg_prod[event_index] <- rexp(1, rates$egg_prod[event_index])
+    rates$immun_gain[event_index] <- (a[event_index] + A[event_index]) * eta
+    rates$immun_gain[event_index] <- (a[event_index] + A[event_index]) * eta
+  } else if (event_type=="immunity_loss") {
+    rates$immun_loss[event_index] <- sig * r[event_index]
+    times$immun_loss[event_index] <- rexp(1, rates$immun_loss[event_index])
+  } else if (event_type=="defecation") {
+    rates$defecation[event_index] <- f_dep*(s[event_index]-s0)*as.numeric(s[event_index]>s0)
+    times$defecation[event_index] <- rexp(1, rates$defecation[event_index])
+    patch <- animal_locations[event_index]
+    rates$grazing[event_index] <- beta * (h[patch] - h0) * exp(-mu_f * f[patch] *(a[event_index]+A[event_index])^Lambda)
+    times$grazing[event_index] <- rexp(1,rates$grazing[event_index])
+    rates$dev_l[event_index]   <- epsilon * l[patch]
+    times$dev_l[event_index] <- rexp(1,rates$dev_l[event_index])
+    rates$death_l[event_index] <- omega * l[patch]
+    times$death_l[event_index] <- rexp(1,rates$death_l[event_index])
+  } else if (event_type=="movement") {
+    rates$movement[,event_index] <- mov_rate(animal_locations[event_index], hj = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches))
+    times$movement[,event_index] <- rexp(length(rates$movement[,event_index]), rates$movement[,event_index])
+  }
+  return(list(rates, times))
+}
+
+tauleap <- function(rates, tau) {
+  # calculate the number of times each event happens in the interval tau
+  events_N <- lapply(rates, \(x) rpois(length(x), x*tau))
+  # update states accordingly
+  
 }
 
 
