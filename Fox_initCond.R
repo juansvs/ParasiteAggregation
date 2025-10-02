@@ -38,24 +38,27 @@ pars <- list(
   alpha = 10 #  power law search coefficient
 )
 
-# initial state for infective larvae. In original paper 24000 larvae distributed
-# across 20 patches in a 78x78 arena
-larvae_patches <- sample(1:N_patches, 20)
-L_counts <- sample(larvae_patches, 24000, replace = T) |> table()
-L <- rep(0, N_patches)
-L[as.numeric(names(L_counts))] <- L_counts
-
-S <- list(
+S <- with(pars,{
+  # initial state for infective larvae. In original paper 24000 larvae distributed
+  # across 20 patches in a 78x78 arena
+  larvae_patches <- sample(1:N_patches, 20)
+  L_counts <- sample(larvae_patches, 24000, replace = T) |> table()
+  L <- rep(0, N_patches)
+  L[as.numeric(names(L_counts))] <- L_counts
+  
   # Patch variables
-  h = rep(h_max / 2, N_patches), # Sward height in each patch
-  f = rep(0, N_patches) ,      # Livestock faeces
-  l = rep(0, N_patches) ,      # uninfective larvae in pasture
-  L = L      ,# infective larvae (L3) in pasture
-  # Host variables
-  animal_locations = sample(1:N_patches, Na, replace = TRUE) , # Place animals randomly on the grid
-  r = rep(0, Na)  ,            # Immune response of each host
-  a = rep(0, Na) ,             # Number of immature parasites in host
-  A = rep(0, Na),              # Number of adult parasites in host  
-  eg = rep(0, Na),             # Number of eggs in host
-  s = rep(0, Na)              # Stomach content per animal
+  list(
+    h = rep(h_max / 2, N_patches), # Sward height in each patch
+    f = rep(0, N_patches) ,      # Livestock faeces
+    l = rep(0, N_patches) ,      # uninfective larvae in pasture
+    L = L      ,# infective larvae (L3) in pasture
+    # Host variables
+    animal_locations = sample(1:N_patches, Na, replace = TRUE) , # Place animals randomly on the grid
+    r = rep(0, Na)  ,            # Immune response of each host
+    a = rep(0, Na) ,             # Number of immature parasites in host
+    A = rep(0, Na),              # Number of adult parasites in host  
+    eg = rep(0, Na),             # Number of eggs in host
+    s = rep(0, Na)              # Stomach content per animal
+  )
+}
 )
