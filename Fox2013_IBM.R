@@ -31,32 +31,38 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
                      event_indices = c(rep(1:N_patches,5), rep(1:Na,8),rep(1:Na, each = N_patches)),
                      destination = c(rep(NA,N_patches*5+Na*8), rep(1:N_patches, Na)))
   
-  
   # Main simulation loop
   while (current_time < total_time) {
     # Create a bunch of random numbers at once to save computation time
     rnums <- matrix(runif(2e4), ncol = 2)
     for (y in 1:nrow(rnums)) {
       # 1. Calculate event rates for all possible events
-      all_rates <- if(current_time > 0) get_event_rates(type = 'sort',event_index,event_db) else get_event_rates(type='exact')
-      total_rate <- sum(all_rates)
+      rates <- if(current_time > 0) get_event_rates_opt(event_type, event_index, rates, pars, S) else get_event_rates0(pars, S)
+      # total_rate <- sum(all_rates)
+      # select next event based on minimum time
       
       # 2. Determine time to next event (exponential distribution)
       # if (total_rate == 0) {
       #   break # No events left to occur
       # }
-      delta_t <- -log(rnums[y,1])/total_rate
+      # delta_t <- -log(rnums[y,1])/total_rate
+      all_times <- do.call(c, rates$times)
+      event <- which.min(all_times)
+      delta_t <- min(all_times)
       
-      # 3. Choose which event occurs
-      event_probs <- cumsum(all_rates/total_rate)
-      event_index <- 1+sum(rnums[y,2]>event_probs)
-      
+      # # 3. Choose which event occurs
+      # event_probs <- cumsum(all_rates/total_rate)
+      # event_index <- 1+sum(rnums[y,2]>event_probs)
+      # 
       # 4. Update state variables based on the chosen event
-      update_state(event_index, event_db)
+      event_type <- event_db$event_types[event]
+      event_index <- event_db$event_indices[event]
+      dest <- event_db$destination[event]
+      update_state_exact(event_type, event_index, dest, S, pars)
       
       # 5. Advance time and record state every 30 minutes
       new_time <- current_time+delta_t
-      record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%30==0)
+      record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
       if(record_state) {
         time_series[ix,] <- c(new_time, mean(h), mean(a), mean(A), sd(A), mean(l), mean(L))
         elapsedtime <- as.numeric(difftime(Sys.time(), starttime), units = "hours")
