@@ -34,8 +34,8 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
   # Main simulation loop
   while (current_time < total_time) {
     # Create a bunch of random numbers at once to save computation time
-    rnums <- matrix(runif(2e4), ncol = 2)
-    for (y in 1:nrow(rnums)) {
+    # rnums <- matrix(runif(2e4), ncol = 2)
+    # for (y in 1:nrow(rnums)) {
       # 1. Calculate event rates for all possible events
       rates <- if(current_time > 0) get_event_rates_opt(event_type, event_index, rates, pars, S) else get_event_rates0(pars, S)
       # total_rate <- sum(all_rates)
@@ -70,8 +70,8 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
         ix <- ix+1
       }
       current_time <- new_time
-      if(current_time>=total_time) break
-    }
+      # if(current_time>=total_time) break
+    # }
   }
   return(time_series)
 }
