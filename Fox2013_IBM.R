@@ -8,24 +8,24 @@
 #### --- Main Simulation Function --- ####
 #
 run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
-  # call up parameters and state variables
-  attach(pars)
-  attach(S)
+  # start timer to keep track of how long the sim is taking
   starttime <- Sys.time()
+  # set seed if specified
   if (!is.null(seed)) {
     set.seed(seed)
   }
 
   # Set up output dataframe
   current_time <- 0
-  time_series <- data.frame(time = numeric(total_time%/%tstep+1), avg_height = 0, avg_a = 0, avg_A = 0, sd_A = 0, avg_l = 0, avg_L = 0)
-  time_series[1,] <- c(current_time, mean(h), mean(a), mean(A), sd(A), mean(l), mean(L))
+  time_series <- data.frame(time = numeric(pars$total_time%/%tstep+1), avg_height = 0, avg_a = 0, avg_A = 0, sd_A = 0, avg_l = 0, avg_L = 0)
+  time_series[1,] <- c(current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L))
   ix <- 2
   cat(c("time","sim_time", "avg_h", "avg_a", "avg_A", "sd_A", "avg_l", "avg_L", "\n"), sep = "\t", file = outf)
-  cat(c(0,current_time, mean(h), mean(a), mean(A), mean(l), mean(L)),"\n", sep = "\t", file = outf, append = T)
+  cat(c(0,current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L)),"\n", sep = "\t", file = outf, append = T)
   
   #rates list object
-  event_db <- list(event_types = c(rep(c("growth","development_l","death_l",
+  event_db <- with(pars,
+                   list(event_types = c(rep(c("growth","development_l","death_l",
                                            "death_L","f_decay"),each = N_patches),
                                      rep(c("bite","death_a",
                                            "development_a","death_A","immunity_gain",
@@ -33,14 +33,15 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
                                      rep("movement",N_patches*Na)),
                      event_indices = c(rep(1:N_patches,5), rep(1:Na,8),rep(1:Na, each = N_patches)),
                      destination = c(rep(NA,N_patches*5+Na*8), rep(1:N_patches, Na)))
+  )
   
   # Main simulation loop
-  while (current_time < total_time) {
+  while (current_time < pars$total_time) {
     # Create a bunch of random numbers at once to save computation time
     # rnums <- matrix(runif(2e4), ncol = 2)
     # for (y in 1:nrow(rnums)) {
       # 1. Calculate event rates for all possible events
-      rates <- if(current_time > 0) get_event_rates_opt(event_type, event_index, rates, pars, S) else get_event_rates0(pars, S)
+      rates_times <- if(current_time > 0) get_event_rates_opt(event_type, event_index, rates_times, pars, S) else get_event_rates0(pars, S)
       # total_rate <- sum(all_rates)
       # select next event based on minimum time
       
@@ -49,9 +50,9 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       #   break # No events left to occur
       # }
       # delta_t <- -log(rnums[y,1])/total_rate
-      all_times <- do.call(c, rates$times)
+      all_times <- do.call(c, rates_times$times)
       event <- which.min(all_times)
-      delta_t <- min(all_times)
+      delta_t <- all_times[event]
       
       # # 3. Choose which event occurs
       # event_probs <- cumsum(all_rates/total_rate)
@@ -61,15 +62,15 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       event_type <- event_db$event_types[event]
       event_index <- event_db$event_indices[event]
       dest <- event_db$destination[event]
-      update_state_exact(event_type, event_index, dest, S, pars)
+      S <- update_state_exact(event_type, event_index, dest, S, pars)
       
       # 5. Advance time and record state every 30 minutes
       new_time <- current_time+delta_t
       record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
       if(record_state) {
-        time_series[ix,] <- c(new_time, mean(h), mean(a), mean(A), sd(A), mean(l), mean(L))
+        time_series[ix,] <- c(new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L))
         elapsedtime <- as.numeric(difftime(Sys.time(), starttime), units = "hours")
-        cat(c(elapsedtime, new_time, mean(h), mean(a), mean(A), sd(A), mean(l), mean(L)), "\n", sep = "\t", file = outf, append = T)
+        cat(c(elapsedtime, new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L)), "\n", sep = "\t", file = outf, append = T)
         ix <- ix+1
       }
       current_time <- new_time
@@ -121,7 +122,9 @@ get_event_rates0 <- function(pars = NULL, S = NULL) {
                 death_a = death_a, dev_a = dev_a, death_A = death_A, immun_gain = immun_gain, immun_loss = immun_loss, egg_prod = egg_prod, 
                 defecation = defecation, 
                 movement = movement)
-    times <- lapply(rates, rexp)
+    times <- lapply(rates, \(x) rexp(length(x), rate = x))
+    # substitute NAs and NaNs with inf
+    times$movement <- matrix(times$movement, ncol = Na)
     
     return(list(rates = rates, 
                 times = times))
@@ -133,8 +136,8 @@ get_event_rates0 <- function(pars = NULL, S = NULL) {
 # function to get the event rates using the Optimized method (sorting method)
 # that does not recalculate every rate, but rather only those affected by the
 # latest event
-get_event_rates_opt <- function(event_type, event_index, rates, pars, S) {
-  with(c(pars, S, rates), {
+get_event_rates_opt <- function(event_type, event_index, rates_times, pars, S) {
+  with(c(pars, S, rates_times), {
     # only update based on previous event
     if(event_type == "growth") {
       rates$growth[event_index] <- gamma * h[event_index] * (1 - h[event_index] / h_max)
@@ -219,8 +222,8 @@ get_event_rates_opt <- function(event_type, event_index, rates, pars, S) {
       rates$death_l[event_index] <- omega * l[patch]
       times$death_l[event_index] <- rexp(1,rates$death_l[event_index])
     } else if (event_type=="movement") {
-      rates$movement[,event_index] <- mov_rate(animal_locations[event_index], hj = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches))
-      times$movement[,event_index] <- rexp(length(rates$movement[,event_index]), rates$movement[,event_index])
+      rates$movement[,event_index] <- c(mov_rate(animal_locations[event_index], hj = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches)))
+      times$movement[,event_index] <- rexp(nrow(rates$movement), rates$movement[,event_index])
     }
     return(list(rates = rates, times = times))
   }
