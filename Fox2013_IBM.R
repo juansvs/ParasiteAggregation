@@ -119,7 +119,7 @@ get_event_rates0 <- function(pars = NULL, S = NULL) {
     # Defecation rates for each animal
     defecation <- f_dep*(s-s0)*as.numeric(s>s0)
     # Movement rates for each animal
-    movement <- sapply(animal_locations, mov_rate, hj = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches))
+    movement <- sapply(animal_locations, mov_rate, h = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches))
     
     
     #create output lists
