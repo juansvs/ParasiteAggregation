@@ -150,8 +150,10 @@ get_event_rates_opt <- function(event_type, event_index, rates_times, pars, S) {
       times$growth[event_index] <- rexp(1,rates$growth[event_index])
       # check which animals are in the patch
       animals_in_patch <- which(animal_locations==event_index)
-      rates$grazing[animals_in_patch] <- beta * (h[event_index] - h0) * exp(-mu_f * f[event_index] *(a[animals_in_patch]+A[animals_in_patch])^Lambda)
-      times$grazing[animals_in_patch] <- rexp(length(animals_in_patch),rates$grazing[animals_in_patch])
+      if(length(animals_in_patch)>0) {
+        rates$grazing[animals_in_patch] <- beta * (h[event_index] - h0) * exp(-mu_f * f[event_index] *(a[animals_in_patch]+A[animals_in_patch])^Lambda)
+        times$grazing[animals_in_patch] <- rexp(length(animals_in_patch),rates$grazing[animals_in_patch])
+      }
     } else if (event_type=="dev_l") {
       rates$dev_l[event_index]   <- epsilon * l[event_index]
       times$dev_l[event_index]   <- rexp(1,rates$dev_l[event_index])
