@@ -35,6 +35,8 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
                      destination = c(rep(NA,N_patches*5+Na*8), rep(1:N_patches, Na)))
   )
   
+  # get movement kernel
+  movkern <- get_mov_kern(pars$nu, pars$alpha, sqrt(pars$N_patches), sqrt(pars$N_patches))
   # Main simulation loop
   while (current_time < pars$total_time) {
     # Create a bunch of random numbers at once to save computation time
@@ -240,22 +242,9 @@ tauleap <- function(rates, tau) {
 
 # function to calculate the rates at which an individual in patch i moves to
 # patch j
-mov_rate <- function(cell_curr, hj, nu, alpha, rw, cl) {
-  index_matrix <- matrix(nrow = rw, ncol = cl)
-  rowmat <- row(index_matrix)
-  colmat <- col(index_matrix)
-  # get x,y coordinates
-  curr_row <- row(index_matrix)[cell_curr]
-  curr_col <- col(index_matrix)[cell_curr]
-  # get distances in x and y from the rest of the grid
-  xdist <- curr_col-colmat
-  ydist <- curr_row-rowmat
-  # power law using the Euclidean distance, and the alpha value
-  F_i <- sqrt(xdist^2+ydist^2)^-alpha
-  # substitute the current cell value by 0
-  F_i[cell_curr] <- 0
-  z_i <- sum(F_i)
-  rate <- nu/z_i*F_i*hj
+mov_rate <- function(cell_curr, h, mk) {
+  mkcoef <- mk[cell_curr,]
+  rate <- mkcoef*h
   return(rate)
 }
 
@@ -320,3 +309,16 @@ update_state_tau <- function() {
   
 }
 
+# function to create the movement kernel, a N_patch x N_patch matrix that has
+# the coefficient considering Euclidean distance
+get_mov_kern <- function(nu, alpha, rw, cl) {
+  dists <- as.matrix(dist(expand.grid(1:rw, 1:cl)))
+  # power law using the Euclidean distance, and the alpha value
+  F_i <- dists^-alpha
+  # set diagonal to 0
+  diag(F_i) <- 0
+  # standardizing sum
+  z_i <- rowSums(F_i)
+  mkcoefs <- nu/z_i*F_i
+  return(mkcoefs)
+}
