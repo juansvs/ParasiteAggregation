@@ -121,7 +121,7 @@ get_event_rates0 <- function(pars, S, mk) {
     # Defecation rates for each animal
     defecation <- f_dep*(s-s0)*as.numeric(s>s0)
     # Movement rates for each animal
-    movement <- sapply(animal_locations, mov_rate, h = h, mk = mk)
+    movement <- t(mk[animal_locations,]*h)
     
     
     #create output lists
@@ -294,7 +294,7 @@ get_event_rates_opt <- function(event_type, event_index, tau_mu, rates_times, pa
       rates$death_l[event_index] <- new_rates[3]
       times$death_l[event_index] <- new_times[3]
     } else if (event_type=="movement") {
-      rates$movement[,event_index] <- c(mov_rate(animal_locations[event_index], h = h, mk = mk))
+      rates$movement[,event_index] <- mk[animal_locations[event_index],]*h
       times$movement[,event_index] <- 1/rates$movement[,event_index]*log(1/runif(nrow(rates$movement)))
     }
     return(list(rates = rates, times = times))
