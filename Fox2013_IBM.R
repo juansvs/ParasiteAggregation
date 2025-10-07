@@ -35,10 +35,12 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
                      destination = c(rep(NA,N_patches*5+Na*8), rep(1:N_patches, Na)))
   )
   
-  # calculate initial rates
-  rates_times <- get_event_rates0(pars, S)
   # get movement kernel
   movkern <- get_mov_kern(pars$nu, pars$alpha, sqrt(pars$N_patches), sqrt(pars$N_patches))
+  
+  # calculate initial rates
+  rates_times <- get_event_rates0(pars, S, movkern)
+  
   # Main simulation loop
   while (current_time < pars$total_time) {
     # Create a bunch of random numbers at once to save computation time
@@ -68,7 +70,7 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       S <- update_state_exact(event_type, event_index, dest, S, pars)
       
       ## 3. Recalculate event rates
-      rates_times <- get_event_rates_opt(event_type, event_index, rates_times, pars, S)
+      rates_times <- get_event_rates_opt(event_type, event_index, rates_times, pars, S, movkern)
       
       # 4. Advance time and record state every 30 minutes
       new_time <- current_time+delta_t
@@ -89,7 +91,7 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
 #
 #### --- Helper Functions --- ####
 #
-get_event_rates0 <- function(pars = NULL, S = NULL) {
+get_event_rates0 <- function(pars, S, mk) {
   with(c(pars,S),{ 
     # sward growth
     growth <- gamma * h * (1 - h / h_max)
@@ -119,7 +121,7 @@ get_event_rates0 <- function(pars = NULL, S = NULL) {
     # Defecation rates for each animal
     defecation <- f_dep*(s-s0)*as.numeric(s>s0)
     # Movement rates for each animal
-    movement <- sapply(animal_locations, mov_rate, h = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches))
+    movement <- sapply(animal_locations, mov_rate, h = h, mk = mk)
     
     
     #create output lists
@@ -142,7 +144,7 @@ get_event_rates0 <- function(pars = NULL, S = NULL) {
 # function to get the event rates using the Optimized method (sorting method)
 # that does not recalculate every rate, but rather only those affected by the
 # latest event
-get_event_rates_opt <- function(event_type, event_index, rates_times, pars, S) {
+get_event_rates_opt <- function(event_type, event_index, rates_times, pars, S, mk) {
   with(c(pars, S, rates_times), {
     # only update based on previous event
     if(event_type == "growth") {
@@ -240,7 +242,7 @@ get_event_rates_opt <- function(event_type, event_index, rates_times, pars, S) {
       rates$death_l[event_index] <- omega * l[patch]
       times$death_l[event_index] <- 1/rates$death_l[event_index]*rnums[4]
     } else if (event_type=="movement") {
-      rates$movement[,event_index] <- c(mov_rate(animal_locations[event_index], hj = h, nu = nu, alpha = alpha, rw = sqrt(N_patches), cl = sqrt(N_patches)))
+      rates$movement[,event_index] <- c(mov_rate(animal_locations[event_index], h = h, mk = mk))
       times$movement[,event_index] <- 1/rates$movement[,event_index]*log(1/runif(nrow(rates$movement)))
     }
     return(list(rates = rates, times = times))
