@@ -35,6 +35,8 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
                      destination = c(rep(NA,N_patches*5+Na*8), rep(1:N_patches, Na)))
   )
   
+  # calculate initial rates
+  rates_times <- get_event_rates0(pars, S)
   # get movement kernel
   movkern <- get_mov_kern(pars$nu, pars$alpha, sqrt(pars$N_patches), sqrt(pars$N_patches))
   # Main simulation loop
@@ -42,12 +44,11 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
     # Create a bunch of random numbers at once to save computation time
     # rnums <- matrix(runif(2e4), ncol = 2)
     # for (y in 1:nrow(rnums)) {
-      # 1. Calculate event rates for all possible events
-      rates_times <- if(current_time > 0) get_event_rates_opt(event_type, event_index, rates_times, pars, S) else get_event_rates0(pars, S)
+      
       # total_rate <- sum(all_rates)
       # select next event based on minimum time
       
-      # 2. Determine time to next event (exponential distribution)
+      # 1. Determine next event (exponential distribution)
       # if (total_rate == 0) {
       #   break # No events left to occur
       # }
@@ -60,13 +61,16 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       # event_probs <- cumsum(all_rates/total_rate)
       # event_index <- 1+sum(rnums[y,2]>event_probs)
       # 
-      # 4. Update state variables based on the chosen event
+      # 2. Update state variables based on the chosen event
       event_type <- event_db$event_types[event]
       event_index <- event_db$event_indices[event]
       dest <- event_db$destination[event]
       S <- update_state_exact(event_type, event_index, dest, S, pars)
       
-      # 5. Advance time and record state every 30 minutes
+      ## 3. Recalculate event rates
+      rates_times <- get_event_rates_opt(event_type, event_index, rates_times, pars, S)
+      
+      # 4. Advance time and record state every 30 minutes
       new_time <- current_time+delta_t
       record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
       if(record_state) {
