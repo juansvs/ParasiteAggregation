@@ -27,7 +27,7 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
   event_db <- with(pars,
                    list(event_types = c(rep(c("growth","development_l","death_l",
                                            "death_L","f_decay"),each = N_patches),
-                                     rep(c("bite","death_a",
+                                     rep(c("grazing","death_a",
                                            "development_a","death_A","immunity_gain",
                                            "immunity_loss","egg_prod","defecation"), each = Na),
                                      rep("movement",N_patches*Na)),
@@ -169,7 +169,7 @@ get_event_rates_opt <- function(event_type, event_index, rates_times, pars, S) {
       animals_in_patch <- which(animal_locations==event_index)
       rates$grazing[animals_in_patch] <- beta * (h[event_index] - h0) * exp(-mu_f * f[event_index] *(a[animals_in_patch]+A[animals_in_patch])^Lambda)
       times$grazing[animals_in_patch] <- rexp(length(animals_in_patch),rates$grazing[animals_in_patch])
-    } else if (event_type=="bite") {
+    } else if (event_type=="grazing") {
       patch <- animal_locations[event_index]
       rates$grazing[event_index] <- beta * (h[patch] - h0) * exp(-mu_f * f[patch] *(a[event_index]+A[event_index])^Lambda)
       times$grazing[event_index] <- rexp(1,rates$grazing[event_index])
@@ -262,7 +262,7 @@ update_state_exact <- function(event_type, event_index, dest = NULL, S, pars) {
       L[event_index] <- L[event_index]-1
     } else if (event_type == "f_decay") {
       f[event_index] <- f[event_index] - 1
-    } else if (event_type == "bite") {
+    } else if (event_type == "grazing") {
       animal_idx    <- event_index
       patch_idx     <- animal_locations[animal_idx]
       h[patch_idx]  <- h[patch_idx]  - 1   # reduce patch sward height
