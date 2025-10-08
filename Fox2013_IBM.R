@@ -202,10 +202,10 @@ get_event_rates_opt <- function(event_type, event_index, tau_mu, rates_times, pa
       new_rate <- beta * (h[patch] - h0) * exp(-mu_f * f[patch] *(a[event_index]+A[event_index])^Lambda)
       rates$grazing[event_index] <- new_rate
       times$grazing[event_index] <- 1/new_rate*log(1/runif(1))+tau_mu
-      curr_rates <- cbind(rates$growth, rates$death_a, rates$dev_a, 
-                          rates$dev_l, rates$death_l, rates$death_L)[event_index,]
-      curr_times <- cbind(times$growth, times$death_a, times$dev_a, 
-                          times$dev_l, times$death_l, times$death_L)[event_index,]
+      curr_rates <- c(rates$growth[patch], rates$death_a[event_index], rates$dev_a[event_index],  
+                      rates$dev_l[patch], rates$death_l[patch], rates$death_L[patch])
+      curr_times <- c(times$growth[patch], times$death_a[event_index], times$dev_a[event_index],  
+                      times$dev_l[patch], times$death_l[patch], times$death_L[patch])
       new_rates <- c(gamma * h[patch] * (1 - h[patch] / h_max),
                      zeta * a[event_index], 
                      chi * a[event_index],
@@ -219,12 +219,12 @@ get_event_rates_opt <- function(event_type, event_index, tau_mu, rates_times, pa
       times$death_a[event_index] <- new_times[2]
       rates$dev_a[event_index]   <- new_rates[3]
       times$dev_a[event_index] <- new_times[3]
-      rates$dev_l[event_index]   <- new_rates[4]
-      times$dev_l[event_index] <- new_times[4]
-      rates$death_l[event_index] <- new_rates[5]
-      times$death_l[event_index] <- new_times[5]
-      rates$death_L[event_index] <- new_rates[6]
-      times$death_L[event_index] <- new_times[6]
+      rates$dev_l[patch]   <- new_rates[4]
+      times$dev_l[patch] <- new_times[4]
+      rates$death_l[patch] <- new_rates[5]
+      times$death_l[patch] <- new_times[5]
+      rates$death_L[patch] <- new_rates[6]
+      times$death_L[patch] <- new_times[6]
     } else if (event_type=="death_a") {
       new_rate <- zeta * a[event_index]
       rates$death_a[event_index] <- new_rate
@@ -281,18 +281,18 @@ get_event_rates_opt <- function(event_type, event_index, tau_mu, rates_times, pa
       rates$defecation[event_index] <- new_rate
       times$defecation[event_index] <- 1/new_rate*log(1/runif(1))+tau_mu
       patch <- animal_locations[event_index]
-      curr_rates <- cbind(rates$grazing, rates$dev_l, rates$death_l)[event_index,]
-      curr_times <- cbind(times$grazing, times$dev_l, times$death_l)[event_index,]
+      curr_rates <- c(rates$grazing[event_index], rates$dev_l[patch], rates$death_l[patch])
+      curr_times <- c(times$grazing[event_index], times$dev_l[patch], times$death_l[patch])
       new_rates <- c(beta * (h[patch] - h0) * exp(-mu_f * f[patch] *(a[event_index]+A[event_index])^Lambda),
                      epsilon * l[patch],
                      omega * l[patch])
       new_times <- curr_rates/new_rates*(curr_times-tau_mu)+tau_mu
       rates$grazing[event_index] <- new_rates[1]
       times$grazing[event_index] <- new_times[1]
-      rates$dev_l[event_index]   <- new_rates[2]
-      times$dev_l[event_index] <- new_times[2]
-      rates$death_l[event_index] <- new_rates[3]
-      times$death_l[event_index] <- new_times[3]
+      rates$dev_l[patch]   <- new_rates[2]
+      times$dev_l[patch] <- new_times[2]
+      rates$death_l[patch] <- new_rates[3]
+      times$death_l[patch] <- new_times[3]
     } else if (event_type=="movement") {
       rates$movement[,event_index] <- mk[animal_locations[event_index],]*h
       times$movement[,event_index] <- 1/rates$movement[,event_index]*log(1/runif(nrow(rates$movement)))
