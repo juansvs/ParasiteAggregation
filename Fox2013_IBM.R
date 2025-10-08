@@ -119,7 +119,7 @@ get_event_rates0 <- function(pars, S, mk) {
     # egg production
     egg_prod <- lambda * A/2
     # Defecation rates for each animal
-    defecation <- f_dep*(s-s0)*as.numeric(s>s0)
+    defecation <- sapply(s, \(x) ifelse(x>s0,f_dep*(s-s0),0))
     # Movement rates for each animal
     movement <- t(mk[animal_locations,]*h)
     
@@ -203,15 +203,18 @@ get_event_rates_opt <- function(event_type, event_index, tau_mu, rates_times, pa
       rates$grazing[event_index] <- new_rate
       times$grazing[event_index] <- 1/new_rate*log(1/runif(1))+tau_mu
       curr_rates <- c(rates$growth[patch], rates$death_a[event_index], rates$dev_a[event_index],  
-                      rates$dev_l[patch], rates$death_l[patch], rates$death_L[patch])
+                      rates$dev_l[patch], rates$death_l[patch], rates$death_L[patch],
+                      rates$defecation[event_index])
       curr_times <- c(times$growth[patch], times$death_a[event_index], times$dev_a[event_index],  
-                      times$dev_l[patch], times$death_l[patch], times$death_L[patch])
+                      times$dev_l[patch], times$death_l[patch], times$death_L[patch],
+                      times$defecation[event_index])
       new_rates <- c(gamma * h[patch] * (1 - h[patch] / h_max),
                      zeta * a[event_index], 
                      chi * a[event_index],
                      epsilon * l[patch],
                      omega * l[patch], 
-                     rho * L[patch])
+                     rho * L[patch],
+                     ifelse(s[event_index]>s0, f_dep*(s[event_index]-s0),0))
       new_times <- curr_rates/new_rates*(curr_times-tau_mu)+tau_mu
       rates$growth[patch]  <- new_rates[1]
       times$growth[patch] <- new_times[1]
@@ -225,6 +228,8 @@ get_event_rates_opt <- function(event_type, event_index, tau_mu, rates_times, pa
       times$death_l[patch] <- new_times[5]
       rates$death_L[patch] <- new_rates[6]
       times$death_L[patch] <- new_times[6]
+      rates$defecation[event_index] <- new_rates[7]
+      times$defecation[event_index] <- new_times[7]
     } else if (event_type=="death_a") {
       new_rate <- zeta * a[event_index]
       rates$death_a[event_index] <- new_rate
