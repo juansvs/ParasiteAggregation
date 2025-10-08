@@ -295,7 +295,7 @@ get_event_rates_opt <- function(event_type, event_index, tau_mu, rates_times, pa
       times$death_l[patch] <- new_times[3]
     } else if (event_type=="movement") {
       rates$movement[,event_index] <- mk[animal_locations[event_index],]*h
-      times$movement[,event_index] <- 1/rates$movement[,event_index]*log(1/runif(nrow(rates$movement)))
+      times$movement[,event_index] <- 1/rates$movement[,event_index]*log(1/runif(nrow(rates$movement)))+tau_mu
     }
     return(list(rates = rates, times = times))
   }
