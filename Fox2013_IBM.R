@@ -70,7 +70,7 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       S <- update_state_exact(event_type, event_index, dest, S, pars)
       
       ## 3. Recalculate event rates
-      rates_times <- get_event_rates_opt(event_type, event_index, delta_t, rates_times, pars, S, movkern)
+      rates_times <- update_rates_nrm(event_type, event_index, delta_t, rates_times, pars, S, movkern)
       
       # 4. Advance time and record state every 30 minutes
       new_time <- delta_t
@@ -144,7 +144,7 @@ get_event_rates0 <- function(pars, S, mk) {
 # function to get the event rates using the Optimized method (sorting method)
 # that does not recalculate every rate, but rather only those affected by the
 # latest event
-get_event_rates_opt <- function(event_type, event_index, tau_mu, rates_times, pars, S, mk) {
+update_rates_nrm <- function(event_type, event_index, tau_mu, rates_times, pars, S, mk) {
   with(c(pars, S, rates_times), {
     # only update based on previous event
     if(event_type == "growth") {
