@@ -1,12 +1,13 @@
 #!/bin/bash
 
 #SBATCH --job-name=FoxSim
-#SBATCH --output=FoxSim-output-file
-#SBATCH --error=FoxSim-error-file
+#SBATCH --output=FoxSim_%J.out
+#SBATCH --error=FoxSim_%J.err
 #SBATCH --time=24:00:00
 #SBATCH --partition=k2-medpri
-#SBATCH --ntasks=50
-#SBATCH --nodes=1-10
+#SBATCH --ntasks=32
+#SBATCH --nodes=4
+#SBATCH --mem-per-cpu=2G
 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=j.vargas@qub.ac.uk
