@@ -43,26 +43,11 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
   
   # Main simulation loop
   while (current_time < pars$total_time) {
-    # Create a bunch of random numbers at once to save computation time
-    # rnums <- matrix(runif(2e4), ncol = 2)
-    # for (y in 1:nrow(rnums)) {
-      
-      # total_rate <- sum(all_rates)
-      # select next event based on minimum time
-      
       # 1. Determine next event (exponential distribution)
-      # if (total_rate == 0) {
-      #   break # No events left to occur
-      # }
-      # delta_t <- -log(rnums[y,1])/total_rate
       all_times <- unlist(rates_times$times, recursive = T, use.names = F)
       event <- which.min(all_times)
       delta_t <- all_times[event]
       
-      # # 3. Choose which event occurs
-      # event_probs <- cumsum(all_rates/total_rate)
-      # event_index <- 1+sum(rnums[y,2]>event_probs)
-      # 
       # 2. Update state variables based on the chosen event
       event_type <- event_db$event_types[event]
       event_index <- event_db$event_indices[event]
@@ -88,8 +73,6 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
         ix <- ix+1
       }
       current_time <- new_time
-      # if(current_time>=total_time) break
-    # }
   }
   return(time_series)
 }
