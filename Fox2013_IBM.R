@@ -77,7 +77,7 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       ## 4. update times
       rates_times$times <- update_times_nrm(event_type, event_index, 
                                             new_rates = new_rates, prev_rates = prev_rates, 
-                                            tk = rates_times$times, tm = delta_t) 
+                                            tk = rates_times$times, tm = delta_t, dest = dest) 
       # 5. Advance time and record state every tstep minutes
       new_time <- delta_t
       record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
