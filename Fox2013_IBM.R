@@ -20,16 +20,16 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
   time_series <- data.frame(time = numeric(pars$total_time%/%tstep+1), avg_height = 0, avg_a = 0, avg_A = 0, sd_A = 0, avg_l = 0, avg_L = 0)
   time_series[1,] <- c(current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L))
   ix <- 2
-  cat(c("time","sim_time", "avg_h", "avg_a", "avg_A", "sd_A", "avg_l", "avg_L", "\n"), sep = "\t", file = outf)
-  cat(c(0,current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L)),"\n", sep = "\t", file = outf, append = T)
+  cat(c("time","sim_time", "avg_h", "avg_a", "avg_A", "sd_A", "avg_l", "avg_L","avg_s", "\n"), sep = "\t", file = outf)
+  cat(c(0,current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s)),"\n", sep = "\t", file = outf, append = T)
   
   #rates list object
   event_db <- with(pars,
-                   list(event_types = c(rep(c("growth","development_l","death_l",
+                   list(event_types = c(rep(c("growth","dev_l","death_l",
                                            "death_L","f_decay"),each = N_patches),
                                      rep(c("grazing","death_a",
-                                           "development_a","death_A","immunity_gain",
-                                           "immunity_loss","egg_prod","defecation"), each = Na),
+                                           "dev_a","death_A","immun_gain",
+                                           "immun_loss","egg_prod","defecation"), each = Na),
                                      rep("movement",N_patches*Na)),
                      event_indices = c(rep(1:N_patches,5), rep(1:Na,8),rep(1:Na, each = N_patches)),
                      destination = c(rep(NA,N_patches*5+Na*8), rep(1:N_patches, Na)))
@@ -189,7 +189,7 @@ update_rates_nrm <- function(event_type, event_index, tau_mu, rates_times, pars,
       rates$death_a[event_index] <- zeta * a[event_index]
       rates$dev_a[event_index]   <- chi * a[event_index]
       rates$immun_gain[event_index] <- (a[event_index] + A[event_index]) * eta
-    } else if (event_type=="development_a") {
+    } else if (event_type=="dev_a") {
       rates$dev_a[event_index]    <- chi * a[event_index]
       rates$death_a[event_index]  <- zeta * a[event_index]
       rates$death_A[event_index]  <- tau * A[event_index]
@@ -199,7 +199,7 @@ update_rates_nrm <- function(event_type, event_index, tau_mu, rates_times, pars,
       rates$death_A[event_index]   <- tau * A[event_index]
       rates$egg_prod[event_index]  <- lambda * A[event_index]/2
       rates$immun_gain[event_index] <- (a[event_index] + A[event_index]) * eta
-    } else if (event_type=="immunity_loss") {
+    } else if (event_type=="immun_loss") {
       rates$immun_loss[event_index] <- sig * r[event_index]
     } else if (event_type=="defecation") {
       rates$defecation[event_index] <- ifelse(s[event_index]>s0, f_dep*(s[event_index]-s0), 0)
@@ -245,7 +245,7 @@ update_state_exact <- function(event_type, event_index, dest = NULL, S, pars) {
   with(c(pars, S),{
     if (event_type == "growth") {
       h[event_index] <- h[event_index] + 1
-    } else if (event_type == "development_l") {
+    } else if (event_type == "dev_l") {
       l[event_index] <- l[event_index]-1
       L[event_index] <- L[event_index]+1
     } else if(event_type == "death_l") {
@@ -256,35 +256,35 @@ update_state_exact <- function(event_type, event_index, dest = NULL, S, pars) {
       f[event_index] <- f[event_index] - 1
     } else if (event_type == "grazing") {
       animal_idx    <- event_index
-      patch_idx     <- animal_locations[animal_idx]
-      h[patch_idx]  <- h[patch_idx]  - 1   # reduce patch sward height
+      patch     <- animal_locations[animal_idx]
+      h[patch]  <- h[patch]  - 1   # reduce patch sward height
       s[animal_idx] <- s[animal_idx] + 1  # increase stomach content
-      l[patch_idx]  <- l[patch_idx]  - B/h[patch_idx]*l[patch_idx] # reduce number of larve in patch
-      L[patch_idx]  <- L[patch_idx]  - B/h[patch_idx]*L[patch_idx] # reduce number of larve in patch
-      a[animal_idx] <- a[animal_idx] + theta*(B/h[patch_idx])*L[patch_idx] # increase number of larvae in host
-      r[animal_idx] <- r[animal_idx] + psi*B*L[patch_idx]/h[patch_idx] # update host resistance
+      l[patch]  <- l[patch]  - B/h[patch]*l[patch] # reduce number of larve in patch
+      L[patch]  <- L[patch]  - B/h[patch]*L[patch] # reduce number of larve in patch
+      a[animal_idx] <- a[animal_idx] + theta*(B/h[patch])*L[patch] # increase number of larvae in host
+      r[animal_idx] <- r[animal_idx] + psi*B*L[patch]/h[patch] # update host resistance
     } else if(event_type == "death_a") {
       a[event_index] <- a[event_index] - 1
-    } else if(event_type == "development_a") {
+    } else if(event_type == "dev_a") {
       a[event_index] <- a[event_index] - 1
       A[event_index] <- A[event_index] + 1
     } else if(event_type == "death_A") {
       A[event_index] <- A[event_index] - 1
-    } else if(event_type == "immunity_gain") {
+    } else if(event_type == "immun_gain") {
       r[event_index] <- r[event_index] + 1
-    } else if(event_type == "immunity_loss") {
+    } else if(event_type == "immun_loss") {
       r[event_index] <- r[event_index] - 1
     } else if(event_type == "egg_prod") {
       eg[event_index] <- eg[event_index] + 1
     } else if (event_type == "defecation") {
       animal_idx <- event_index
-      patch_idx <- animal_locations[animal_idx]
+      patch <- animal_locations[animal_idx]
       # Heaviside function (Theta(s_k - s0))
       if (s[animal_idx] >= s0) {
         eg[animal_idx] <- eg[animal_idx] - s0/s[animal_idx]*eg[animal_idx]
-        l[patch_idx]   <- l[patch_idx] + s0/s[animal_idx]*eg[animal_idx]
+        l[patch]   <- l[patch] + s0/s[animal_idx]*eg[animal_idx]
         s[animal_idx]  <- s[animal_idx] - s0
-        f[patch_idx]   <- f[patch_idx] + s0
+        f[patch]   <- f[patch] + s0
       }
     } else if (event_type == "movement") {
       animal_locations[event_index] <- dest
