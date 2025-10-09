@@ -55,7 +55,7 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       #   break # No events left to occur
       # }
       # delta_t <- -log(rnums[y,1])/total_rate
-      all_times <- do.call(c, rates_times$times)
+      all_times <- unlist(rates_times$times, recursive = T, use.names = F)
       event <- which.min(all_times)
       delta_t <- all_times[event]
       
