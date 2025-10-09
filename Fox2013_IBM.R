@@ -82,7 +82,7 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       new_time <- delta_t
       record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
       if(record_state) {
-        time_series[ix,] <- c(new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L))
+        time_series[ix,] <- c(new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s))
         elapsedtime <- as.numeric(difftime(Sys.time(), starttime), units = "hours")
         cat(c(elapsedtime, new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L)), "\n", sep = "\t", file = outf, append = T)
         ix <- ix+1
