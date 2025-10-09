@@ -217,10 +217,14 @@ update_rates_nrm <- function(event_type, event_index, tau_mu, rates_times, pars,
 
 # function to update the absolute time to the next event, for every possible
 # event
-update_times_nrm <- function(event_type, event_index, new_rates, prev_rates, tk, tm) {
-  new_times <- mapply(function(A, B, tk) A/B*(tk-tm)+tm, new_rates, prev_rates, tk)
-  eix <- match(event_type, names(prev_rates))
-  new_times[[eix]][event_index] <- 1/new_rates[[eix]][event_index]*log(1/runif(1))+tm
+update_times_nrm <- function(event_type, event_index, new_rates, prev_rates, tk, tm, dest) {
+  new_times <- mapply(function(A, B, tk) A/B*(tk-tm)+tm, prev_rates, new_rates, tk)
+  if(event_type=='movement') {
+    new_times$movement[, event_index] <- 1/new_rates$movement[,event_index]*log(1/runif(nrow(new_times$movement)))+tm
+  } else {
+    eix <- match(event_type, names(prev_rates))
+    new_times[[eix]][event_index] <- 1/new_rates[[eix]][event_index]*log(1/runif(1))+tm
+  }
   return(new_times)
 }
 
