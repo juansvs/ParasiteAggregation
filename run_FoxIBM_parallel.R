@@ -24,9 +24,9 @@ registerDoParallel(cl)
 
 #--- run code in parallel
 outfnames <- paste0("outputs/FoxSimout_", format(Sys.time(),"%y%m%d_%H%M-"),1:nWorkers,".out")
-out <- foreach(i=1:(nWorkers)) %dopar%  run_model(seed = 234, tstep = 60, outf = outfnames[[i]], pars, S)
+out <- foreach(i=1:(nWorkers)) %dopar%  run_model(tstep = 60, outf = outfnames[[i]], pars, S)
+stopCluster(cl)
 
 outname <- paste0("FoxSimOut_", format(Sys.time(), format = "%y%m%d_%H%M"), ".rds")
 saveRDS(out, file = outname)
-stopCluster(cl)
 
