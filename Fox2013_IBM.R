@@ -190,6 +190,7 @@ update_rates_nrm <- function(event_type, event_index, tau_mu, rates_times, pars,
       rates$grazing[event_index] <- beta * (h[patch] - h0) * exp(-mu_f * f[patch] *(a[event_index]+A[event_index])*Lambda)
       rates$dev_l[patch]   <- epsilon * l[patch]
       rates$death_l[patch] <- omega * l[patch]
+      rates$f_decay[patch] <- phi * f[patch]
     } else if (event_type=="movement") {
       rates$movement[,event_index] <- mk[animal_locations[event_index],]*h
     }
