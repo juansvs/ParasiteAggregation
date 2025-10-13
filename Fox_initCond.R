@@ -38,6 +38,7 @@ pars <- list(
   alpha = 10 #  power law search coefficient
 )
 
+
 S <- with(pars,{
   # initial state for infective larvae. In original paper 24000 larvae distributed
   # across 20 patches in a 78x78 arena
@@ -62,3 +63,4 @@ S <- with(pars,{
   )
 }
 )
+
