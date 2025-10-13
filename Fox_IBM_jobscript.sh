@@ -5,7 +5,7 @@
 #SBATCH --error=FoxSim_%J.err
 #SBATCH --time=24:00:00
 #SBATCH --partition=k2-medpri
-#SBATCH --ntasks=32
+#SBATCH --ntasks=10
 #SBATCH --nodes=4
 #SBATCH --mem-per-cpu=2G
 
