@@ -145,7 +145,7 @@ update_rates_nrm <- function(event_type, event_index, tau_mu, rates_times, pars,
       }
     } else if (event_type=="dev_l") {
       rates$dev_l[event_index]   <- epsilon * l[event_index]
-      rates$death_l[event_index] <- nomega * l[event_index]
+      rates$death_l[event_index] <- omega * l[event_index]
       rates$death_L[event_index] <- rho*L[event_index]
     } else if (event_type=="death_l") {
       rates$death_l[event_index] <- omega * l[event_index]
@@ -153,14 +153,14 @@ update_rates_nrm <- function(event_type, event_index, tau_mu, rates_times, pars,
     } else if (event_type=="death_L") {
       rates$death_L[event_index] <- rho * L[event_index]
     } else if (event_type=="f_decay") {
-      rates$f_decay[event_index] <- phi * f_decay[event_index]
+      rates$f_decay[event_index] <- phi * f[event_index]
       animals_in_patch <- animal_locations==event_index
       if(any(animals_in_patch)) {
         rates$grazing[animals_in_patch] <- beta * (h[event_index] - h0) * exp(-mu_f * f[event_index] *(a[animals_in_patch]+A[animals_in_patch])*Lambda)
       }
     } else if (event_type=="grazing") {
       patch <- animal_locations[event_index]
-      rates$grazing[event_index] <- beta * (h[patch] - h0) * exp(-mu_f * f[patch] *(a[event_index]+A[event_index])^Lambda)
+      rates$grazing[event_index] <- beta * (h[patch] - h0) * exp(-mu_f * f[patch] *(a[event_index]+A[event_index])*Lambda)
       rates$growth[patch]  <- gamma * h[patch] * (1 - h[patch] / h_max)
       rates$death_a[event_index] <- zeta * a[event_index]
       rates$dev_a[event_index]   <- chi * a[event_index]
