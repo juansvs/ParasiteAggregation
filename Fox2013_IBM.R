@@ -243,14 +243,14 @@ update_state_exact <- function(event_type, event_index, dest = NULL, S, pars) {
     } else if (event_type == "f_decay") {
       f[event_index] <- f[event_index] - 1
     } else if (event_type == "grazing") {
-      animal_idx    <- event_index
-      patch     <- animal_locations[animal_idx]
+      animal    <- event_index
+      patch     <- animal_locations[animal]
       h[patch]  <- h[patch]  - 1   # reduce patch sward height
-      s[animal_idx] <- s[animal_idx] + 1  # increase stomach content
+      s[animal] <- s[animal] + 1  # increase stomach content
       l[patch]  <- l[patch]  - B/h[patch]*l[patch] # reduce number of larve in patch
       L[patch]  <- L[patch]  - B/h[patch]*L[patch] # reduce number of larve in patch
-      a[animal_idx] <- a[animal_idx] + theta*(B/h[patch])*L[patch] # increase number of larvae in host
-      r[animal_idx] <- r[animal_idx] + psi*B*L[patch]/h[patch] # update host resistance
+      a[animal] <- a[animal] + theta*(B/h[patch])*L[patch] # increase number of larvae in host
+      r[animal] <- r[animal] + psi*B*L[patch]/h[patch] # update host resistance
     } else if(event_type == "death_a") {
       a[event_index] <- a[event_index] - 1
     } else if(event_type == "dev_a") {
@@ -265,13 +265,13 @@ update_state_exact <- function(event_type, event_index, dest = NULL, S, pars) {
     } else if(event_type == "egg_prod") {
       eg[event_index] <- eg[event_index] + 1
     } else if (event_type == "defecation") {
-      animal_idx <- event_index
-      patch <- animal_locations[animal_idx]
+      animal <- event_index
+      patch <- animal_locations[animal]
       # Heaviside function (Theta(s_k - s0))
-      if (s[animal_idx] >= s0) {
-        eg[animal_idx] <- eg[animal_idx] - s0/s[animal_idx]*eg[animal_idx]
-        l[patch]   <- l[patch] + s0/s[animal_idx]*eg[animal_idx]
-        s[animal_idx]  <- s[animal_idx] - s0
+      if (s[animal] >= s0) {
+        eg[animal] <- eg[animal] - s0/s[animal]*eg[animal]
+        l[patch]   <- l[patch] + s0/s[animal]*eg[animal]
+        s[animal]  <- s[animal] - s0
         f[patch]   <- f[patch] + s0
       }
     } else if (event_type == "movement") {
