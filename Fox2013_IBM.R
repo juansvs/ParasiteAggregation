@@ -202,11 +202,25 @@ update_rates_nrm <- function(event_type, event_index, tau_mu, rates_times, pars,
 # function to update the absolute time to the next event, for every possible
 # event
 update_times_nrm <- function(event_type, event_index, new_rates, prev_rates, tk, tm, dest) {
-  new_times <- mapply(function(A, B, tk) A/B*(tk-tm)+tm, prev_rates, new_rates, tk)
+  new_times <- tk
+  changed_rates <- mapply("!=",prev_rates, new_rates)|>sapply(any)
+  eix <- which(event_type == names(new_times))
+  kevents <- setdiff(which(changed_rates),eix)
+  if(length(kevents)>0) {
+    new_times[kevents] <- mapply(function(p, n, t) {
+      A <- t
+      # substitute times of Inf (rate = 0) with a random number 
+      i <- which(p == 0 & n != p)
+      A[i] <- 1/n[i]*log(1/runif(length(i)))
+      # substitute non Inf times using the old rate and new rates
+      i <- which(p > 0 & n != p)
+      A[i] <- p[i]/n[i]*(t[i]-tm)+tm
+      return(list(A))
+    }, prev_rates[kevents], new_rates[kevents], tk[kevents])
+  }
   if(event_type=='movement') {
     new_times$movement[, event_index] <- 1/new_rates$movement[,event_index]*log(1/runif(nrow(new_times$movement)))+tm
   } else {
-    eix <- match(event_type, names(prev_rates))
     new_times[[eix]][event_index] <- 1/new_rates[[eix]][event_index]*log(1/runif(1))+tm
   }
   return(new_times)
