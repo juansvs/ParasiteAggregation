@@ -108,7 +108,7 @@ get_event_rates0 <- function(pars, S, mk) {
     # egg production
     egg_prod <- lambda * A/2
     # Defecation rates for each animal
-    defecation <- sapply(s, \(x) ifelse(x>s0,f_dep*(s-s0),0))
+    defecation <- sapply(s, \(x) ifelse(x>s0,f_dep*(x-s0),0))
     # Movement rates for each animal
     movement <- t(mk[animal_locations,]*h)
     
