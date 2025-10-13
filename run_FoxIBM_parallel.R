@@ -18,7 +18,7 @@ library(doParallel)
 source('Fox2013_IBM.R')
 source('Fox_initCond.R')
 #--- Set up parallel workers
-nWorkers<-length(future::availableWorkers())/2
+nWorkers<-length(future::availableWorkers())
 cl <- makeCluster(nWorkers)
 registerDoParallel(cl)
 
@@ -27,6 +27,6 @@ outfnames <- paste0("outputs/FoxSimout_", format(Sys.time(),"%y%m%d_%H%M-"),1:nW
 out <- foreach(i=1:(nWorkers)) %dopar%  run_model(tstep = 60, outf = outfnames[[i]], pars, S)
 stopCluster(cl)
 
-outname <- paste0("FoxSimOut_", format(Sys.time(), format = "%y%m%d_%H%M"), ".rds")
+outname <- paste0("outputs/FoxSimOut_", format(Sys.time(), format = "%y%m%d_%H%M"), ".rds")
 saveRDS(out, file = outname)
 
