@@ -94,7 +94,7 @@ get_event_rates0 <- function(pars, S, mk) {
     f_decay <- phi * f
     
     # Grazing rates for each animal
-    grazing <- beta * (h[animal_locations] - h0) * exp(-mu_f * f[animal_locations] *(a+A)^Lambda)
+    grazing <- beta * (h[animal_locations] - h0) * exp(-mu_f * f[animal_locations] *(a+A)*Lambda)
     # death of immature adults in host
     death_a <- zeta * a
     # development into adult parasites
@@ -141,7 +141,7 @@ update_rates_nrm <- function(event_type, event_index, tau_mu, rates_times, pars,
       # check which animals are in the patch
       animals_in_patch <- animal_locations==event_index
       if(any(animals_in_patch)) {
-        rates$grazing[animals_in_patch] <- beta * (h[event_index] - h0) * exp(-mu_f * f[event_index] *(a[animals_in_patch]+A[animals_in_patch])^Lambda)
+        rates$grazing[animals_in_patch] <- beta * (h[event_index] - h0) * exp(-mu_f * f[event_index] *(a[animals_in_patch]+A[animals_in_patch])*Lambda)
       }
     } else if (event_type=="dev_l") {
       rates$dev_l[event_index]   <- epsilon * l[event_index]
@@ -156,7 +156,7 @@ update_rates_nrm <- function(event_type, event_index, tau_mu, rates_times, pars,
       rates$f_decay[event_index] <- phi * f_decay[event_index]
       animals_in_patch <- animal_locations==event_index
       if(any(animals_in_patch)) {
-        rates$grazing[animals_in_patch] <- beta * (h[event_index] - h0) * exp(-mu_f * f[event_index] *(a[animals_in_patch]+A[animals_in_patch])^Lambda)
+        rates$grazing[animals_in_patch] <- beta * (h[event_index] - h0) * exp(-mu_f * f[event_index] *(a[animals_in_patch]+A[animals_in_patch])*Lambda)
       }
     } else if (event_type=="grazing") {
       patch <- animal_locations[event_index]
@@ -187,7 +187,7 @@ update_rates_nrm <- function(event_type, event_index, tau_mu, rates_times, pars,
     } else if (event_type=="defecation") {
       rates$defecation[event_index] <- ifelse(s[event_index]>s0, f_dep*(s[event_index]-s0), 0)
       patch <- animal_locations[event_index]
-      rates$grazing[event_index] <- beta * (h[patch] - h0) * exp(-mu_f * f[patch] *(a[event_index]+A[event_index])^Lambda)
+      rates$grazing[event_index] <- beta * (h[patch] - h0) * exp(-mu_f * f[patch] *(a[event_index]+A[event_index])*Lambda)
       rates$dev_l[patch]   <- epsilon * l[patch]
       rates$death_l[patch] <- omega * l[patch]
     } else if (event_type=="movement") {
