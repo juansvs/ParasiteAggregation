@@ -211,7 +211,7 @@ update_times_nrm <- function(event_type, event_index, new_rates, prev_rates, tk,
       A <- t
       # substitute times of Inf (rate = 0) with a random number 
       i <- which(p == 0 & n != p)
-      A[i] <- 1/n[i]*log(1/runif(length(i)))
+      A[i] <- 1/n[i]*log(1/runif(length(i)))+tm
       # substitute non Inf times using the old rate and new rates
       i <- which(p > 0 & n != p)
       A[i] <- p[i]/n[i]*(t[i]-tm)+tm
