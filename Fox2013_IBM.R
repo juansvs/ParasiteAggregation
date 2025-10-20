@@ -15,14 +15,19 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
     set.seed(seed)
   }
 
-  # Set up output dataframe
+  # Set up output dataframes
   current_time <- 0
   time_series <- data.frame(time = numeric(pars$total_time%/%tstep+1), avg_height = 0, avg_a = 0, avg_A = 0, sd_A = 0, avg_l = 0, avg_L = 0, avg_s = 0, avg_f = 0)
   time_series[1,] <- c(current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
   ix <- 2
   cat(c("time","sim_time", "avg_h", "avg_a", "avg_A", "sd_A", "avg_l", "avg_L","avg_s", "avg_f", "\n"), sep = "\t", file = outf)
   cat(c(0,current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f)),"\n", sep = "\t", file = outf, append = T)
-  
+  # list with movement info
+  movlist <- replicate(Na, data.frame(time = numeric(), patch = integer()))
+  # dataframe with parasite dist
+  pardb <- as.data.frame(matrix(nrow = pars$total_time%/%tstep+1, ncol = Na+1))
+  names(pardb) <- c("time", paste0("A", 1:Na))
+
   #rates list object
   event_db <- with(pars,
                    list(event_types = c(rep(c("growth","dev_l","death_l",
@@ -54,6 +59,11 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       dest <- event_db$destination[event]
       S <- update_state_exact(event_type, event_index, dest, S, pars)
       
+      # record movement
+      if(event_type == 'movement') {
+        movlist[[event_index]] <- rbind(movlist[[event_index]], c(new_time, dest))
+      }
+      
       ## 3. Recalculate event rates
       prev_rates <- rates_times$rates
       new_rates <- update_rates_nrm(event_type, event_index, new_time, rates_times, pars, S, movkern)
@@ -69,11 +79,12 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
         time_series[ix,] <- c(new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
         elapsedtime <- as.numeric(difftime(Sys.time(), starttime), units = "hours")
         cat(c(elapsedtime, new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f), "\n"), sep = "\t", file = outf, append = T)
+        pardb[ix,] <- c(new_time, S$A)
         ix <- ix+1
       }
       current_time <- new_time
   }
-  return(time_series)
+  return(list(time_series, movlist, pardb))
 }
 
 #
