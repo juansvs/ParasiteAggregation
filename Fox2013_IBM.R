@@ -15,14 +15,19 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
     set.seed(seed)
   }
 
-  # Set up output dataframe
+  # Set up output dataframes
   current_time <- 0
   time_series <- data.frame(time = numeric(pars$total_time%/%tstep+1), avg_height = 0, avg_a = 0, avg_A = 0, sd_A = 0, avg_l = 0, avg_L = 0, avg_s = 0, avg_f = 0)
   time_series[1,] <- c(current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
   ix <- 2
   cat(c("time","sim_time", "avg_h", "avg_a", "avg_A", "sd_A", "avg_l", "avg_L","avg_s", "avg_f", "\n"), sep = "\t", file = outf)
   cat(c(0,current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f)),"\n", sep = "\t", file = outf, append = T)
-  
+  # list with movement info
+  movlist <- replicate(Na, data.frame(time = numeric(), patch = integer()))
+  # dataframe with parasite dist
+  pardb <- as.data.frame(matrix(nrow = pars$total_time%/%tstep+1, ncol = Na+1))
+  names(pardb) <- c("time", paste0("A", 1:Na))
+
   #rates list object
   event_db <- with(pars,
                    list(event_types = c(rep(c("growth","dev_l","death_l",
@@ -46,7 +51,7 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       # 1. Determine next event (exponential distribution)
       all_times <- unlist(rates_times$times, recursive = T, use.names = F)
       event <- which.min(all_times)
-      delta_t <- all_times[event]
+      new_time <- all_times[event]
       
       # 2. Update state variables based on the chosen event
       event_type <- event_db$event_types[event]
@@ -54,27 +59,32 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       dest <- event_db$destination[event]
       S <- update_state_exact(event_type, event_index, dest, S, pars)
       
+      # record movement
+      if(event_type == 'movement') {
+        movlist[[event_index]] <- rbind(movlist[[event_index]], c(new_time, dest))
+      }
+      
       ## 3. Recalculate event rates
       prev_rates <- rates_times$rates
-      new_rates <- update_rates_nrm(event_type, event_index, delta_t, rates_times, pars, S, movkern)
+      new_rates <- update_rates_nrm(event_type, event_index, new_time, rates_times, pars, S, movkern)
       rates_times$rates <- new_rates
       
       ## 4. update times
       rates_times$times <- update_times_nrm(event_type, event_index, 
                                             new_rates = new_rates, prev_rates = prev_rates, 
-                                            tk = rates_times$times, tm = delta_t, dest = dest) 
+                                            tk = rates_times$times, tm = new_time, dest = dest) 
       # 5. Advance time and record state every tstep minutes
-      new_time <- delta_t
       record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
       if(record_state) {
         time_series[ix,] <- c(new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
         elapsedtime <- as.numeric(difftime(Sys.time(), starttime), units = "hours")
         cat(c(elapsedtime, new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f), "\n"), sep = "\t", file = outf, append = T)
+        pardb[ix,] <- c(new_time, S$A)
         ix <- ix+1
       }
       current_time <- new_time
   }
-  return(time_series)
+  return(list(time_series, movlist, pardb))
 }
 
 #
@@ -248,34 +258,34 @@ update_state_exact <- function(event_type, event_index, dest = NULL, S, pars) {
     if (event_type == "growth") {
       h[event_index] <- h[event_index] + 1
     } else if (event_type == "dev_l") {
-      l[event_index] <- l[event_index]-1
+      l[event_index] <- max(l[event_index]-1, 0)
       L[event_index] <- L[event_index]+1
     } else if(event_type == "death_l") {
-      l[event_index] <- l[event_index]-1
+      l[event_index] <- max(l[event_index]-1, 0)
     } else if(event_type == "death_L") {
-      L[event_index] <- L[event_index]-1
+      L[event_index] <- max(L[event_index]-1, 0)
     } else if (event_type == "f_decay") {
-      f[event_index] <- f[event_index] - 1
+      f[event_index] <- max(f[event_index] - 1, 0)
     } else if (event_type == "grazing") {
       animal    <- event_index
       patch     <- animal_locations[animal]
       h[patch]  <- h[patch]  - 1   # reduce patch sward height
       s[animal] <- s[animal] + 1  # increase stomach content
-      l[patch]  <- l[patch]  - B/h[patch]*l[patch] # reduce number of larve in patch
-      L[patch]  <- L[patch]  - B/h[patch]*L[patch] # reduce number of larve in patch
+      l[patch]  <- max(l[patch]  - B/h[patch]*l[patch], 0) # reduce number of larve in patch
+      L[patch]  <- max(L[patch]  - B/h[patch]*L[patch], 0) # reduce number of larve in patch
       a[animal] <- a[animal] + theta*(B/h[patch])*L[patch] # increase number of larvae in host
       r[animal] <- r[animal] + psi*B*L[patch]/h[patch] # update host resistance
     } else if(event_type == "death_a") {
-      a[event_index] <- a[event_index] - 1
+      a[event_index] <- max(a[event_index] - 1, 0)
     } else if(event_type == "dev_a") {
-      a[event_index] <- a[event_index] - 1
+      a[event_index] <- max(a[event_index] - 1, 0)
       A[event_index] <- A[event_index] + 1
     } else if(event_type == "death_A") {
-      A[event_index] <- A[event_index] - 1
+      A[event_index] <- max(A[event_index] - 1, 0)
     } else if(event_type == "immun_gain") {
       r[event_index] <- r[event_index] + 1
     } else if(event_type == "immun_loss") {
-      r[event_index] <- r[event_index] - 1
+      r[event_index] <- max(r[event_index] - 1, 0)
     } else if(event_type == "egg_prod") {
       eg[event_index] <- eg[event_index] + 1
     } else if (event_type == "defecation") {
