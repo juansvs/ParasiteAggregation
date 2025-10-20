@@ -23,10 +23,10 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
   cat(c("time","sim_time", "avg_h", "avg_a", "avg_A", "sd_A", "avg_l", "avg_L","avg_s", "avg_f", "\n"), sep = "\t", file = outf)
   cat(c(0,current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f)),"\n", sep = "\t", file = outf, append = T)
   # list with movement info
-  movlist <- replicate(Na, data.frame(time = numeric(), patch = integer()))
+  movlist <- replicate(pars$Na, data.frame(time = numeric(), patch = integer()))
   # dataframe with parasite dist
-  pardb <- as.data.frame(matrix(nrow = pars$total_time%/%tstep+1, ncol = Na+1))
-  names(pardb) <- c("time", paste0("A", 1:Na))
+  pardb <- as.data.frame(matrix(nrow = pars$total_time%/%tstep+1, ncol = pars$Na+1))
+  names(pardb) <- c("time", paste0("A", 1:pars$Na))
 
   #rates list object
   event_db <- with(pars,
