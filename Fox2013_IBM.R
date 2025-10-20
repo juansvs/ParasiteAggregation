@@ -247,34 +247,34 @@ update_state_exact <- function(event_type, event_index, dest = NULL, S, pars) {
     if (event_type == "growth") {
       h[event_index] <- h[event_index] + 1
     } else if (event_type == "dev_l") {
-      l[event_index] <- l[event_index]-1
+      l[event_index] <- max(l[event_index]-1, 0)
       L[event_index] <- L[event_index]+1
     } else if(event_type == "death_l") {
-      l[event_index] <- l[event_index]-1
+      l[event_index] <- max(l[event_index]-1, 0)
     } else if(event_type == "death_L") {
-      L[event_index] <- L[event_index]-1
+      L[event_index] <- max(L[event_index]-1, 0)
     } else if (event_type == "f_decay") {
-      f[event_index] <- f[event_index] - 1
+      f[event_index] <- max(f[event_index] - 1, 0)
     } else if (event_type == "grazing") {
       animal    <- event_index
       patch     <- animal_locations[animal]
       h[patch]  <- h[patch]  - 1   # reduce patch sward height
       s[animal] <- s[animal] + 1  # increase stomach content
-      l[patch]  <- l[patch]  - B/h[patch]*l[patch] # reduce number of larve in patch
-      L[patch]  <- L[patch]  - B/h[patch]*L[patch] # reduce number of larve in patch
+      l[patch]  <- max(l[patch]  - B/h[patch]*l[patch], 0) # reduce number of larve in patch
+      L[patch]  <- max(L[patch]  - B/h[patch]*L[patch], 0) # reduce number of larve in patch
       a[animal] <- a[animal] + theta*(B/h[patch])*L[patch] # increase number of larvae in host
       r[animal] <- r[animal] + psi*B*L[patch]/h[patch] # update host resistance
     } else if(event_type == "death_a") {
-      a[event_index] <- a[event_index] - 1
+      a[event_index] <- max(a[event_index] - 1, 0)
     } else if(event_type == "dev_a") {
-      a[event_index] <- a[event_index] - 1
+      a[event_index] <- max(a[event_index] - 1, 0)
       A[event_index] <- A[event_index] + 1
     } else if(event_type == "death_A") {
-      A[event_index] <- A[event_index] - 1
+      A[event_index] <- max(A[event_index] - 1, 0)
     } else if(event_type == "immun_gain") {
       r[event_index] <- r[event_index] + 1
     } else if(event_type == "immun_loss") {
-      r[event_index] <- r[event_index] - 1
+      r[event_index] <- max(r[event_index] - 1, 0)
     } else if(event_type == "egg_prod") {
       eg[event_index] <- eg[event_index] + 1
     } else if (event_type == "defecation") {
