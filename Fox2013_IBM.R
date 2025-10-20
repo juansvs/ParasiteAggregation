@@ -46,7 +46,7 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       # 1. Determine next event (exponential distribution)
       all_times <- unlist(rates_times$times, recursive = T, use.names = F)
       event <- which.min(all_times)
-      delta_t <- all_times[event]
+      new_time <- all_times[event]
       
       # 2. Update state variables based on the chosen event
       event_type <- event_db$event_types[event]
@@ -56,15 +56,14 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       
       ## 3. Recalculate event rates
       prev_rates <- rates_times$rates
-      new_rates <- update_rates_nrm(event_type, event_index, delta_t, rates_times, pars, S, movkern)
+      new_rates <- update_rates_nrm(event_type, event_index, new_time, rates_times, pars, S, movkern)
       rates_times$rates <- new_rates
       
       ## 4. update times
       rates_times$times <- update_times_nrm(event_type, event_index, 
                                             new_rates = new_rates, prev_rates = prev_rates, 
-                                            tk = rates_times$times, tm = delta_t, dest = dest) 
+                                            tk = rates_times$times, tm = new_time, dest = dest) 
       # 5. Advance time and record state every tstep minutes
-      new_time <- delta_t
       record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
       if(record_state) {
         time_series[ix,] <- c(new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
