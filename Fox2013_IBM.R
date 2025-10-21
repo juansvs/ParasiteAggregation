@@ -59,6 +59,14 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       dest <- event_db$destination[event]
       S <- update_state_exact(event_type, event_index, dest, S, pars)
       
+      # check for NAs
+      nastates <- lapply(S, is.na)|>sapply(any)
+      if(any(nastates)) {
+        cat("found NA state at ",which(nastates), " at time ", new_time)
+        save(S, rates_times, event_type, event_index, dest, prev_rates, prev_times, file = "err.rds")
+        break
+      }
+      
       # record movement
       if(event_type == 'movement') {
         movlist[[event_index]] <- rbind(movlist[[event_index]], data.frame(time = new_time, patch = dest))
