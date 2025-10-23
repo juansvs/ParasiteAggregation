@@ -62,8 +62,8 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
       # check for NAs
       nastates <- lapply(S, is.na)|>sapply(any)
       if(any(nastates)) {
-        cat("found NA state at ",which(nastates), " at time ", new_time)
-        save(S, rates_times, event_type, event_index, dest, prev_rates, prev_times, file = "err.rds")
+        cat("found NA state at ",which(nastates), " at time ", new_time, file = outf, append = T)
+        save(S, rates_times, event_type, event_index, dest, prev_rates, file = "errorstate.RData")
         break
       }
       
