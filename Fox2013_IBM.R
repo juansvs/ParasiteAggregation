@@ -7,7 +7,7 @@
 #
 #### --- Main Simulation Function --- ####
 #
-run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
+run_model <- function(seed = NULL, tstep = 30, outf, pars, S, method) {
   # start timer to keep track of how long the sim is taking
   starttime <- Sys.time()
   # set seed if specified
@@ -48,6 +48,7 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
   
   # Main simulation loop
   while (current_time < pars$total_time) {
+    if(method == "nrm") {
       # 1. Determine next event (exponential distribution)
       all_times <- unlist(rates_times$times, recursive = T, use.names = F)
       event <- which.min(all_times)
@@ -83,14 +84,41 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S) {
                                             tk = rates_times$times, tm = new_time, dest = dest) 
       # 5. Advance time and record state every tstep minutes
       record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
-      if(record_state) {
-        time_series[ix,] <- c(new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
-        elapsedtime <- as.numeric(difftime(Sys.time(), starttime), units = "hours")
-        cat(c(elapsedtime, new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f), "\n"), sep = "\t", file = outf, append = T)
-        pardb[ix,] <- c(new_time, S$A)
-        ix <- ix+1
-      }
       current_time <- new_time
+    } else if(method == "tau") {
+      # 1 determine times to next movement for each, and destinations
+      movtimes <- apply(rates_times$times$movement, 2, min)
+      movdests <- apply(rates_times$times$movement, 2, which.min)
+      movorder <- order(movtimes)
+      movtimes_ord <- c(movtimes[movorder][1],diff(movtimes[movorder]))
+      # register steps
+      movlist <- mapply(function(l,t,d) rbind(l, data.frame(time = current_time+t, patch = d)),
+                        movlist, movtimes, movdests)
+
+      # update state iteratively, changing the position of the animals
+      for (y in 1:pars$Na) {
+        ind <- movorder[y]
+        dt <- movtimes_ord[y]
+        dest <- movdests[ind]
+        # update states before movement
+        S <- update_state_tau(dt, rates_times, S, pars)
+        # update location
+        S$animal_locations[ind] <- dest
+      }
+      # recalculate rates
+      rates_times <- get_event_rates0(pars, S, mk)
+      # update sim time
+      new_time <- current_time+max(movtimes)
+      record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
+      current_time <- new_time
+    }
+    if(record_state) {
+      time_series[ix,] <- c(new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
+      elapsedtime <- as.numeric(difftime(Sys.time(), starttime), units = "hours")
+      cat(c(elapsedtime, new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f), "\n"), sep = "\t", file = outf, append = T)
+      pardb[ix,] <- c(new_time, S$A)
+      ix <- ix+1
+    }
   }
   return(list(time_series, movlist, pardb))
 }
@@ -317,8 +345,68 @@ update_state_exact <- function(event_type, event_index, dest = NULL, S, pars) {
   )
 }
 
-update_state_tau <- function() {
-  
+# tau leap function estimates the number of (non-movement) events that have
+# occurred in a given timespan dt and returns the updated state. The number of
+# events is drawn from a Poisson distribution
+update_state_tau <- function(dt, RT, S, pars) {
+  rates <- RT$rates[1:13]
+  # calculate the number of times each event happens in the interval dt
+  events_N <- lapply(rates, \(x) rpois(length(x), x*dt))
+  occurring <- sapply(events_N,\(x) sum(x)>0)
+  patches <- S$animal_locations
+  with(pars, {
+    # growth
+    if(occurring[1]) S$h <- S$h+events_N$growth
+    # dev_l
+    if(occurring[2]) {
+      S$l <- S$l-events_N$dev_l
+      S$L <- S$L+events_N$dev_l
+    }
+    # death_l
+    if(occurring[3]) S$l <- S$l-events_N$death_l
+    # death_L
+    if(occurring[4]) S$L <- S$L-events_N$death_L
+    # f_decay
+    if(occurring[5]) S$f <- S$f-events_N$f_decay
+    # grazing
+    if(occurring[6]) {
+      S$h[patches] <- S$h[patches]-events_N$grazing
+      S$s <- S$s + events_N$grazing
+      S$l[patches] <- S$l[patches]-B/S$h[patches]*S$l[patches]*events_N$grazing
+      S$L[patches] <- S$L[patches]-B/S$h[patches]*S$L[patches]*events_N$grazing
+      S$a <- S$a+theta*(B/S$h[patches])*S$L[patches]*events_N$grazing
+      S$r <- S$r+psi*B/S$h[patches]*S$L[patches]*events_N$grazing
+    }
+    # death_a
+    if(occurring[7]) S$a <- S$a-events_N$death_a
+    # dev_a
+    if(occurring[8]) {
+      S$a <- S$a-events_N$dev_a
+      S$A <- S$A+events_N$dev_a
+    }
+    # death_A
+    if(occurring[9]) S$A <- S$A - events_N$death_A
+    # immun_gain
+    if(occurring[10])   S$r <- S$r+events_N$immun_gain
+    # immun_loss
+    if(occurring[11])   S$r <- S$r-events_N$immun_loss
+    # egg_prod
+    if(occurring[12])   S$eg <- S$eg+events_N$egg_prod
+    # defecation
+    if(occurring[13]) {
+      def_inds <- which(S$s>s0)
+      if(length(def_inds)>0) {
+        S$eg[def_inds] <- S$eg[def_inds] - s0/S$s[def_inds]*S$eg[def_inds]*events_N$defecation[def_inds]
+        S$l[patches][def_inds] <- S$l[patches][def_inds]+s0/S$s[def_inds]*S$eg[def_inds]*events_N$defecation[def_inds]
+        S$s[def_inds] <- S$s[def_inds]-s0*events_N$defecation[def_inds]
+        S$f[patches][def_inds] <- S$f[patches][def_inds]+s0*events_N$defecation[def_inds]
+      }
+    }
+    # replace neg values
+    S <- lapply(S, \(x) replace(x, list = x<0, values = 0))
+    return(list(S, events_N))
+  }
+  )
 }
 
 # function to create the movement kernel, a N_patch x N_patch matrix that has
