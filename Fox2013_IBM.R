@@ -44,13 +44,14 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S, method) {
   movkern <- get_mov_kern(pars$nu, pars$alpha, sqrt(pars$N_patches), sqrt(pars$N_patches))
   
   # calculate initial rates
-  rates_times <- get_event_rates0(pars, S, movkern)
+  event_rates <- get_event_rates0(pars, S, movkern)
   
   # Main simulation loop
   while (current_time < pars$total_time) {
     if(method == "nrm") {
+      event_times <- get_event_times0(event_rates)
       # 1. Determine next event (exponential distribution)
-      all_times <- unlist(rates_times$times, recursive = T, use.names = F)
+      all_times <- unlist(event_times, recursive = T, use.names = F)
       event <- which.min(all_times)
       new_time <- all_times[event]
       
@@ -81,7 +82,7 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S, method) {
       ## 4. update times
       rates_times$times <- update_times_nrm(event_type, event_index, 
                                             new_rates = new_rates, prev_rates = prev_rates, 
-                                            tk = rates_times$times, tm = new_time, dest = dest) 
+                                            tk = event_times, tm = new_time, dest = dest) 
       # 5. Advance time and record state every tstep minutes
       record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
       current_time <- new_time
@@ -158,21 +159,29 @@ get_event_rates0 <- function(pars, S, mk) {
     # Movement rates for each animal
     movement <- t(mk[animal_locations,]*h)
     
-    
     #create output lists
     rates <- list(growth = growth, dev_l = dev_l, death_l = death_l, death_L = death_L, f_decay = f_decay, 
                 grazing = grazing, 
                 death_a = death_a, dev_a = dev_a, death_A = death_A, immun_gain = immun_gain, immun_loss = immun_loss, egg_prod = egg_prod, 
                 defecation = defecation, 
                 movement = movement)
-    times <- lapply(rates, \(x) 1/x*log(1/runif(length(x))))
-    # substitute NAs and NaNs with inf
-    times$movement <- matrix(times$movement, ncol = Na)
     
-    return(list(rates = rates, 
-                times = times))
+    # replace negatives for 0s
+    rates <- lapply(rates, \(x) replace(x, x<0, 0))
+    
+    return(rates)
   }
   )
+}
+
+## initial event times, for the NRM method
+get_event_times0 <- function(r, Na) {
+  times <- lapply(r, \(x) 1/x*log(1/runif(length(x))))
+  # replace 0s
+  times <- lapply(times, \(x) replace(x, x<0, 0))
+  # substitute NAs and NaNs with inf
+  times$movement <- matrix(times$movement, ncol = Na)
+  return(times)
 }
 
 
@@ -348,8 +357,8 @@ update_state_exact <- function(event_type, event_index, dest = NULL, S, pars) {
 # tau leap function estimates the number of (non-movement) events that have
 # occurred in a given timespan dt and returns the updated state. The number of
 # events is drawn from a Poisson distribution
-update_state_tau <- function(dt, RT, S, pars) {
-  rates <- RT$rates[1:13]
+update_state_tau <- function(dt, rates, S, pars) {
+  rates <- rates[1:13]
   # calculate the number of times each event happens in the interval dt
   events_N <- lapply(rates, \(x) rpois(length(x), x*dt))
   occurring <- sapply(events_N,\(x) sum(x)>0)
