@@ -87,29 +87,28 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S, method) {
       record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
       current_time <- new_time
     } else if(method == "tau") {
-      # 1 determine times to next movement for each, and destinations
-      movtimes <- apply(rates_times$times$movement, 2, min)
-      movdests <- apply(rates_times$times$movement, 2, which.min)
-      movorder <- order(movtimes)
-      movtimes_ord <- c(movtimes[movorder][1],diff(movtimes[movorder]))
-      # register steps
-      movlist <- mapply(function(l,t,d) rbind(l, data.frame(time = current_time+t, patch = d)),
-                        movlist, movtimes, movdests)
-
+       # 1 determine times to next movement for each, and destinations
+      movtimes <- apply(event_times$movement, 2, min)
+      movind <- which.min(movtimes)
+      dest <- which.min(event_times$movement[,movind])
+      
+      # register step
+      movlist[[movind]] <- rbind(movlist[[movind]], data.frame(time = current_time+min(movtimes), patch = dest))
+      
       # update state iteratively, changing the position of the animals
-      for (y in 1:pars$Na) {
-        ind <- movorder[y]
-        dt <- movtimes_ord[y]
-        dest <- movdests[ind]
-        # update states before movement
-        S <- update_state_tau(dt, rates_times, S, pars)
-        # update location
-        S$animal_locations[ind] <- dest
-      }
-      # recalculate rates
-      rates_times <- get_event_rates0(pars, S, mk)
-      # update sim time
-      new_time <- current_time+max(movtimes)
+      prev_S <- S
+      prev_rates <- event_rates
+      updt <- update_state_tau(min(minmovtimes), event_rates, S, pars)
+      S <- updt[[1]]
+      evs <- updt[[2]]
+      # update location of individual
+      S$animal_locations[movind] <- dest
+      # recalculate rates and times
+      event_rates <- get_event_rates0(pars, S, mk)
+      event_times <- get_event_times0(event_rates, pars$Na)
+      new_time <- current_time+min(movtimes)
+      record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%120==0)
+      # update time
       record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
       current_time <- new_time
     }
