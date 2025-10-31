@@ -281,14 +281,6 @@ update_times_nrm <- function(event_type, event_index, new_rates, prev_rates, tk,
   return(new_times)
 }
 
-tauleap <- function(rates, tau) {
-  # calculate the number of times each event happens in the interval tau
-  events_N <- lapply(rates, \(x) rpois(length(x), x*tau))
-  # update states accordingly
-  
-}
-
-
 # function to calculate the rates at which an individual in patch i moves to
 # patch j
 mov_rate <- function(cell_curr, h, mk) {
