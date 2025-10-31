@@ -45,11 +45,11 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S, method) {
   
   # calculate initial rates
   event_rates <- get_event_rates0(pars, S, movkern)
+  event_times <- get_event_times0(event_rates, pars$Na)
   
   # Main simulation loop
   while (current_time < pars$total_time) {
     if(method == "nrm") {
-      event_times <- get_event_times0(event_rates)
       # 1. Determine next event (exponential distribution)
       all_times <- unlist(event_times, recursive = T, use.names = F)
       event <- which.min(all_times)
