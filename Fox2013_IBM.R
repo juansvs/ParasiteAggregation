@@ -77,10 +77,10 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S, method) {
       ## 3. Recalculate event rates
       prev_rates <- rates_times$rates
       new_rates <- update_rates_nrm(event_type, event_index, new_time, rates_times, pars, S, movkern)
-      rates_times$rates <- new_rates
+      event_rates <- new_rates
       
       ## 4. update times
-      rates_times$times <- update_times_nrm(event_type, event_index, 
+      event_times <- update_times_nrm(event_type, event_index, 
                                             new_rates = new_rates, prev_rates = prev_rates, 
                                             tk = event_times, tm = new_time, dest = dest) 
       # 5. Advance time and record state every tstep minutes
