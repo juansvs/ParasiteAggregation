@@ -152,7 +152,7 @@ run_model_tau <- function(seed = NULL, tstep = 180, outf, pars, S) {
     current_time <- new_time
     
     if(record_state) {
-      time_series[ix,] <- c(new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
+      time_series <- c(time_series, S)
       elapsedtime <- as.numeric(difftime(Sys.time(), starttime), units = "hours")
       cat(c(elapsedtime, new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f), "\n"), sep = "\t", file = outf, append = T)
     }
