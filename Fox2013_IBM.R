@@ -7,7 +7,7 @@
 #
 #### --- Main Simulation Function --- ####
 #
-run_model <- function(seed = NULL, tstep = 30, outf, pars, S, method) {
+run_model_nrm <- function(seed = NULL, tstep = 180, outf, pars, S) {
   # start timer to keep track of how long the sim is taking
   starttime <- Sys.time()
   # set seed if specified
@@ -48,69 +48,109 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S, method) {
   
   # Main simulation loop
   while (current_time < pars$total_time) {
-    if(method == "nrm") {
-      # 1. Determine next event (exponential distribution)
-      all_times <- unlist(event_times, recursive = T, use.names = F)
-      event <- which.min(all_times)
-      new_time <- all_times[event]
-      
-      # 2. Update state variables based on the chosen event
-      event_type <- event_db$event_types[event]
-      event_index <- event_db$event_indices[event]
-      dest <- event_db$destination[event]
-      S <- update_state_exact(event_type, event_index, dest, S, pars)
-      
-      # check for NAs
-      nastates <- lapply(S, is.na)|>sapply(any)
-      if(any(nastates)) {
-        cat("found NA state at ",which(nastates), " at time ", new_time, file = outf, append = T)
-        save(S, rates_times, event_type, event_index, dest, prev_rates, file = "errorstate.RData")
-        break
-      }
-      
-      # record movement
-      if(event_type == 'movement') {
-        movlist[[event_index]] <- rbind(movlist[[event_index]], data.frame(time = new_time, patch = dest))
-      }
-      
-      ## 3. Recalculate event rates
-      prev_rates <- rates_times$rates
-      new_rates <- update_rates_nrm(event_type, event_index, new_time, rates_times, pars, S, movkern)
-      event_rates <- new_rates
-      
-      ## 4. update times
-      event_times <- update_times_nrm(event_type, event_index, 
-                                            new_rates = new_rates, prev_rates = prev_rates, 
-                                            tk = event_times, tm = new_time, dest = dest) 
-      # 5. Advance time and record state every tstep minutes
-      record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
-      current_time <- new_time
-    } else if(method == "tau") {
-       # 1 determine times to next movement for each, and destinations
-      movtimes <- apply(event_times$movement, 2, min)
-      movind <- which.min(movtimes)
-      dest <- which.min(event_times$movement[,movind])
-      
-      # register step
-      movlist[[movind]] <- rbind(movlist[[movind]], data.frame(time = current_time+min(movtimes), patch = dest))
-      
-      # update state iteratively, changing the position of the animals
-      prev_S <- S
-      prev_rates <- event_rates
-      updt <- update_state_tau(min(minmovtimes), event_rates, S, pars)
-      S <- updt[[1]]
-      evs <- updt[[2]]
-      # update location of individual
-      S$animal_locations[movind] <- dest
-      # recalculate rates and times
-      event_rates <- get_event_rates0(pars, S, mk)
-      event_times <- get_event_times0(event_rates, pars$Na)
-      new_time <- current_time+min(movtimes)
-      record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%120==0)
-      # update time
-      record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
-      current_time <- new_time
+    # 1. Determine next event (exponential distribution)
+    all_times <- unlist(event_times, recursive = T, use.names = F)
+    event <- which.min(all_times)
+    new_time <- all_times[event]
+    
+    # 2. Update state variables based on the chosen event
+    event_type <- event_db$event_types[event]
+    event_index <- event_db$event_indices[event]
+    dest <- event_db$destination[event]
+    S <- update_state_exact(event_type, event_index, dest, S, pars)
+    
+    # record movement
+    if(event_type == 'movement') {
+      movlist[[event_index]] <- rbind(movlist[[event_index]], data.frame(time = new_time, patch = dest))
     }
+    
+    ## 3. Recalculate event rates
+    prev_rates <- rates_times$rates
+    new_rates <- update_rates_nrm(event_type, event_index, new_time, rates_times, pars, S, movkern)
+    event_rates <- new_rates
+    
+    ## 4. update times
+    event_times <- update_times_nrm(event_type, event_index, 
+                                    new_rates = new_rates, prev_rates = prev_rates, 
+                                    tk = event_times, tm = new_time, dest = dest) 
+    # 5. Advance time and record state every tstep minutes
+    record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%tstep==0)
+    current_time <- new_time
+    
+    if(record_state) {
+      time_series <- c(time_series, S)
+      # time_series[ix,] <- c(new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
+      elapsedtime <- as.numeric(difftime(Sys.time(), starttime), units = "hours")
+      cat(c(elapsedtime, new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f), "\n"), sep = "\t", file = outf, append = T)
+    }
+  }
+  return(list(time_series, movlist))
+}
+
+run_model_tau <- function(seed = NULL, tstep = 180, outf, pars, S) {
+  # start timer to keep track of how long the sim is taking
+  starttime <- Sys.time()
+  # set seed if specified
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+  # Set up output dataframes
+  current_time <- 0
+  time_series <- list()
+  time_series[[1]] <- S
+  
+  cat(c("time","sim_time", "avg_h", "avg_a", "avg_A", "sd_A", "avg_l", "avg_L","avg_s", "avg_f", "\n"), sep = "\t", file = outf)
+  cat(c(0,current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f)),"\n", sep = "\t", file = outf, append = T)
+  # list with movement info
+  movlist <- replicate(pars$Na, data.frame(time = 0, patch = 0), simplify = F)
+
+  #rates list object
+  event_db <- with(pars,
+                   list(event_types = c(rep(c("growth","dev_l","death_l",
+                                              "death_L","f_decay"),each = N_patches),
+                                        rep(c("grazing","death_a",
+                                              "dev_a","death_A","immun_gain",
+                                              "immun_loss","egg_prod","defecation"), each = Na),
+                                        rep("movement",N_patches*Na)),
+                        event_indices = c(rep(1:N_patches,5), rep(1:Na,8),rep(1:Na, each = N_patches)),
+                        destination = c(rep(NA,N_patches*5+Na*8), rep(1:N_patches, Na)))
+  )
+  
+  # get movement kernel
+  movkern <- get_mov_kern(pars$nu, pars$alpha, sqrt(pars$N_patches), sqrt(pars$N_patches))
+  
+  # calculate initial rates
+  event_rates <- get_event_rates0(pars, S, movkern)
+  event_times <- get_event_times0(event_rates, pars$Na)
+  
+  # Main simulation loop
+  while (current_time < pars$total_time) {
+    # select the next step based on the rates
+    nxmove <- sample(1:length(event_rates$movement), 1, prob = event_rates$movement)
+    # get the corresponding rate
+    movrate <- event_rates$movement[nxmove]
+    # find the moving individual and destination patch
+    movind <- col(event_rates$movement)[nxmove]
+    dest <- row(event_rates$movement)[nxmove]
+    # draw a random time for that event
+    movtime <- 1/sum(event_rates$movement)*log(1/runif(1))
+    # cat(movind, "to", dest, movtime, "minutes. ")
+    
+    # register step
+    movlist[[movind]] <- rbind(movlist[[movind]], data.frame(time = current_time+movtime, patch = dest))
+    
+    # update state
+    S <- update_state_tau(movtime, event_rates, S, pars)
+    
+    # update location of individual
+    S$animal_locations[movind] <- dest
+    # update rates
+    event_rates <- get_event_rates0(pars, S, mk)
+    # update sim time
+    new_time <- current_time+movtime
+    record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%120==0)
+    current_time <- new_time
+    
     if(record_state) {
       time_series[ix,] <- c(new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
       elapsedtime <- as.numeric(difftime(Sys.time(), starttime), units = "hours")
