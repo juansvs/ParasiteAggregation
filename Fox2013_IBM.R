@@ -17,16 +17,15 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S, method) {
 
   # Set up output dataframes
   current_time <- 0
-  time_series <- data.frame(time = numeric(pars$total_time%/%tstep+1), avg_height = 0, avg_a = 0, avg_A = 0, sd_A = 0, avg_l = 0, avg_L = 0, avg_s = 0, avg_f = 0)
-  time_series[1,] <- c(current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
-  ix <- 2
+  time_series <- list()
+  time_series[[1]] <- S
+  # time_series <- data.frame(time = numeric(pars$total_time%/%tstep+1), avg_height = 0, avg_a = 0, avg_A = 0, sd_A = 0, avg_l = 0, avg_L = 0, avg_s = 0, avg_f = 0)
+  # time_series[1,] <- c(current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
+  # ix <- 2
   cat(c("time","sim_time", "avg_h", "avg_a", "avg_A", "sd_A", "avg_l", "avg_L","avg_s", "avg_f", "\n"), sep = "\t", file = outf)
   cat(c(0,current_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f)),"\n", sep = "\t", file = outf, append = T)
   # list with movement info
   movlist <- replicate(pars$Na, data.frame(time = 0, patch = 0), simplify = F)
-  # dataframe with parasite dist
-  pardb <- as.data.frame(matrix(nrow = pars$total_time%/%tstep+1, ncol = pars$Na+1))
-  names(pardb) <- c("time", paste0("A", 1:pars$Na))
 
   #rates list object
   event_db <- with(pars,
@@ -116,11 +115,9 @@ run_model <- function(seed = NULL, tstep = 30, outf, pars, S, method) {
       time_series[ix,] <- c(new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f))
       elapsedtime <- as.numeric(difftime(Sys.time(), starttime), units = "hours")
       cat(c(elapsedtime, new_time, mean(S$h), mean(S$a), mean(S$A), sd(S$A), mean(S$l), mean(S$L), mean(S$s), mean(S$f), "\n"), sep = "\t", file = outf, append = T)
-      pardb[ix,] <- c(new_time, S$A)
-      ix <- ix+1
     }
   }
-  return(list(time_series, movlist, pardb))
+  return(list(time_series, movlist))
 }
 
 #
