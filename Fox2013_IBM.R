@@ -145,7 +145,7 @@ run_model_tau <- function(seed = NULL, tstep = 180, outf, pars, S) {
     # update location of individual
     S$animal_locations[movind] <- dest
     # update rates
-    event_rates <- get_event_rates0(pars, S, mk)
+    event_rates <- get_event_rates0(pars, S, movkern)
     # update sim time
     new_time <- current_time+movtime
     record_state <- all(floor(new_time)>floor(current_time),floor(new_time)%%120==0)
