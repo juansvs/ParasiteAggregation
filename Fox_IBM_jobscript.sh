@@ -5,9 +5,9 @@
 #SBATCH --error=FoxSim_%J.err
 #SBATCH --time=24:00:00
 #SBATCH --partition=k2-medpri
-#SBATCH --ntasks=10
+#SBATCH --ntasks=4
 #SBATCH --nodes=4
-#SBATCH --mem-per-cpu=2G
+#SBATCH --mem-per-cpu=4G
 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=j.vargas@qub.ac.uk
