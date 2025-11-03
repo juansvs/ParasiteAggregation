@@ -404,7 +404,7 @@ update_state_tau <- function(dt, rates, S, pars) {
     }
     # replace neg values
     S <- lapply(S, \(x) replace(x, list = x<0, values = 0))
-    return(list(S, events_N))
+    return(S)
   }
   )
 }
