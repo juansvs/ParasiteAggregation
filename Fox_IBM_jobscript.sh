@@ -6,8 +6,8 @@
 #SBATCH --time=24:00:00
 #SBATCH --partition=k2-medpri
 #SBATCH --ntasks=10
-#SBATCH --nodes=4
-#SBATCH --mem-per-cpu=2G
+#SBATCH --nodes=4-10
+#SBATCH --mem-per-cpu=4G
 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=j.vargas@qub.ac.uk
