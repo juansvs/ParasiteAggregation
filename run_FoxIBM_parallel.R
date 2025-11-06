@@ -25,7 +25,7 @@ registerDoParallel(cl)
 #--- run code in parallel
 nsims <- 50
 outfnames <- paste0("outputs/FoxSimout_", format(Sys.time(),"%y%m%d_%H%M-"),1:nsims,".out")
-out <- foreach(i=1:(nWorkers)) %dopar%  run_model_tau(tstep = 360, outf = outfnames[[i]], pars = pars, S = S)
+out <- foreach(i=1:nsims) %dopar%  run_model_tau(tstep = 360, outf = outfnames[[i]], pars = pars, S = S)
 stopCluster(cl)
 
 outname <- paste0("outputs/FoxSimOut_", format(Sys.time(), format = "%y%m%d_%H%M"), ".rds")
